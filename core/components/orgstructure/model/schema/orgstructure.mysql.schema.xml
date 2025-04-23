@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model package="orgstructure" baseClass="xPDOObject" platform="mysql" defaultEngine="InnoDB" phporgstructure-package="orgstructure"
+       version="1.1">
+    <object class="osTree" table="orgstructure_tree" extends="xPDOSimpleObject">
+       <field key="parent_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="parents_ids" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="title" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="class" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="target_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="menuindex" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+
+       <index alias="parent_id" name="parent_id" primary="false" unique="false" type="BTREE">
+              <column key="parent_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="parents_ids" name="parents_ids" primary="false" unique="false" type="BTREE">
+              <column key="parents_ids" length="" collation="A" null="false"/>
+       </index>
+       <index alias="title" name="title" primary="false" unique="false" type="BTREE">
+              <column key="title" length="" collation="A" null="false"/>
+       </index>
+       <index alias="class" name="class" primary="false" unique="false" type="BTREE">
+              <column key="class" length="" collation="A" null="false"/>
+       </index>
+       <index alias="target_id" name="target_id" primary="false" unique="false" type="BTREE">
+              <column key="target_id" length="" collation="A" null="false"/>
+       </index>
+    </object>
+
+    <object class="osOrg" table="orgstructure_orgs" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+    </object>
+
+    <object class="osFilial" table="orgstructure_filials" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+    </object>
+    <object class="osDepartment" table="orgstructure_departments" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+    </object>
+    <object class="osPost" table="orgstructure_posts" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+    </object>
+    <object class="osEmployee" table="orgstructure_employees" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+       <field key="user_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="post_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+       <index alias="user_id" name="user_id" primary="false" unique="false" type="BTREE">
+              <column key="user_id" length="" collation="A" null="false"/>
+       </index>
+    </object>
+    <object class="osAccess" table="orgstructure_accesses" extends="xPDOSimpleObject">
+       <field key="tree_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="group_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="user_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+
+       <index alias="tree_id" name="tree_id" primary="false" unique="false" type="BTREE">
+              <column key="tree_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="user_id" name="user_id" primary="false" unique="false" type="BTREE">
+              <column key="user_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="group_id" name="group_id" primary="false" unique="false" type="BTREE">
+              <column key="group_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+    </object>
+</model>
