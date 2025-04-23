@@ -5,7 +5,7 @@ export default {
             osTree:{
                 table:'osTree',
                 autocomplete_field:'',
-                version:9,
+                version:12,
                 type: 3,
                 authenticated:true,
                 groups:'',
@@ -137,6 +137,14 @@ export default {
                                         type:'form',
                                         title:'Основное',
                                         table:'osOrg',
+                                    },
+                                    employees:{
+                                        type:'table',
+                                        title:'Сотрудники',
+                                        table:'osEmployeeChild',
+                                        where:{
+                                            parents_ids: 'tree_id'
+                                        }
                                     }
                                 }
                             },
@@ -146,6 +154,14 @@ export default {
                                         type:'form',
                                         title:'Основное',
                                         table:'osFilial',
+                                    },
+                                    employees:{
+                                        type:'table',
+                                        title:'Сотрудники',
+                                        table:'osEmployeeChild',
+                                        where:{
+                                            parents_ids: 'tree_id'
+                                        }
                                     }
                                 }
                             },
@@ -155,6 +171,14 @@ export default {
                                         type:'form',
                                         title:'Основное',
                                         table:'osDepartment',
+                                    },
+                                    employees:{
+                                        type:'table',
+                                        title:'Сотрудники',
+                                        table:'osEmployeeChild',
+                                        where:{
+                                            parents_ids: 'tree_id'
+                                        }
                                     },
                                     access:{
                                         type:'table',
@@ -409,6 +433,66 @@ export default {
                         active:{
                             label:'Активен',
                             type:'boolean',
+                        },
+                        user_id:{
+                            label:'Пользователь',
+                            type:'autocomplete',
+                            table:'osModUser',
+                        },
+                        post_id:{
+                            label:'Должность',
+                            type:'autocomplete',
+                            table:'osPost',
+                        },
+                    }
+                }
+            },
+            osEmployeeChild:{
+                table:'osEmployeeChild',
+                class:'osTree',
+                autocomplete_field:'',
+                version:4,
+                type: 1,
+                authenticated:true,
+                groups:'',
+                permitions:'',
+                active:true,
+                properties: {
+                    query:{
+                        leftJoin:{
+                            osEmployee:{
+                                class:'osEmployee',
+                                on:"osTree.class = 'osEmployee' and osTree.target_id = osEmployee.id"
+                            }
+                        },
+                        where:{
+                            'osTree.class':'osEmployee'
+                        },
+                        select:{
+                            osEmployee:'*',
+                            osTree:'osTree.id as tree_id'
+                        }
+                    },
+                    actions:{
+                        read:{},
+                        update:{
+                            groups:'Administrator,hr'
+                        }
+                    },
+                    fields:{
+                        id:{
+                            type:'view',
+                        },
+                        name:{
+                            label:'ФИО сотрудника',
+                            type:'text',
+                        },
+                        active:{
+                            label:'Активен',
+                            type:'boolean',
+                            filter:{
+                                value: 1, matchMode: 'equals'
+                            }
                         },
                         user_id:{
                             label:'Пользователь',
