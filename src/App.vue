@@ -26,6 +26,7 @@
       type:'tree',
       title: 'Структура организации',
       table: 'osTree',
+      dragable: true
     },
   });
 </script>
