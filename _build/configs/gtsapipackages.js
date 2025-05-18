@@ -5,7 +5,7 @@ export default {
             osTree:{
                 table:'osTree',
                 autocomplete_field:'',
-                version:12,
+                version:13,
                 type: 3,
                 authenticated:true,
                 groups:'',
@@ -132,6 +132,7 @@ export default {
                     nodeclick:{
                         classes:{
                             osOrg:{
+                                label: 'Организация',
                                 tabs:{
                                     main:{
                                         type:'form',
@@ -149,6 +150,7 @@ export default {
                                 }
                             },
                             osFilial:{
+                                label: 'Филиал',
                                 tabs:{
                                     main:{
                                         type:'form',
@@ -166,6 +168,7 @@ export default {
                                 }
                             },
                             osDepartment:{
+                                label: 'Отдел',
                                 tabs:{
                                     main:{
                                         type:'form',
@@ -191,6 +194,7 @@ export default {
                                 }
                             },
                             osEmployee:{
+                                label: 'Сотрудник',
                                 tabs:{
                                     main:{
                                         type:'form',
