@@ -161,7 +161,9 @@ class OrgStructure
         if ($this->modx->user->isMember('Administrator')) {
             return $this->success();
         }
-        
+        //для демо
+        if($this->modx->getOption('orgstructure_debug')) return $this->success();
+
         // Получаем группы пользователя
         $userGroups = [];
         $q = $this->modx->newQuery('modUserGroupMember');
