@@ -1,20 +1,22 @@
 export default {
     orgstructure:{
-        name:'orgstructure',
+        name:'orgstructure', //имя пакета MODX
         gtsAPITables:{
             osTree:{
-                table:'osTree',
-                autocomplete_field:'',
-                version:13,
-                type: 3,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                gtsAPIUniTreeClass:{
+                table:'osTree', //Название таблицы
+                //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно. 
+                autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:13, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 3, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                gtsAPIUniTreeClass:{ // Определения связанных таблиц. Нужны для синхронизации названий записей с таблицей UniTree.
                     osOrg: {
-                        title_field: 'name',
-                        svg:`
+                        title_field: 'name', // поле названия в связанной таблице.
+                        svg: //svg картинка таблицы в дереве
+                        `
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
@@ -57,17 +59,17 @@ export default {
                         `
                     },
                 },
-                properties: {
-                    actions:{
-                        create:{
-                            tables:{
-                                osOrg:{
-                                    groups:'Administrator',
+                properties: { // свойства таблицы
+                    actions:{ // Действия определенные для таблицы. Для дерева это действия в раскрывающемся списке дерева.
+                        create:{ //создать
+                            tables:{ // определяет кнопку создать для разных таблиц gtsAPI
+                                osOrg:{ // Для таблицы с именем table="osOrg"
+                                    groups:'Administrator', //Группа пользователей которым разрешено создавать организации
                                     label:'Создать организацию',
-                                    parent_classes:['root'],
+                                    parent_classes:['root'], //'root' можно создавать в корне дерева
                                     cls: 'p-button-rounded p-button-info',
-                                    form:'UniTree',
-                                    add_fields: {
+                                    form:'UniTree', // пока нужно. Предустановленая форма для создания узла дерева.
+                                    add_fields: { //добавочные поля в форму
                                         active: {
                                             label: 'Включено',
                                             type: 'boolean',
@@ -125,26 +127,28 @@ export default {
                                 },
                             }
                         },
-                        delete:{
-                            groups:'Administrator'
+                        delete:{ // удалить узел дерева
+                            groups:'Administrator' // разрешено только администраторам.
                         },
                     },
-                    nodeclick:{
-                        classes:{
-                            osOrg:{
-                                label: 'Организация',
-                                tabs:{
-                                    main:{
-                                        type:'form',
-                                        title:'Основное',
-                                        table:'osOrg',
+                    nodeclick:{ //Действия при клике на узел дерева
+                        classes:{ // Определяет действие при клике для разных классов узла
+                            osOrg:{ //Для класс osOrg в панели связанной с деревом показывает табы
+                                label: 'Организация', //подпись панели
+                                tabs:{ //конфигурация табов
+                                    main:{ //таб
+                                        type:'form', //В табе форма редактирования
+                                        title:'Основное', // подпись таба
+                                        table:'osOrg', //Таблица gtsAPI с редактируемыми записями
                                     },
                                     employees:{
-                                        type:'table',
-                                        title:'Сотрудники',
-                                        table:'osEmployeeChild',
-                                        where:{
-                                            parents_ids: 'tree_id'
+                                        type:'table', //В табе отображается таблица
+                                        title:'Сотрудники', // подпись таба
+                                        table:'osEmployeeChild', //Таблица gtsAPI с редактируемыми записями
+                                        where:{ //Фильтр записей в таблице
+                                            parents_ids: 'tree_id' //parents_ids: особое условие, что отбираются записи дочерние id заданному в parents_ids
+                                            //'tree_id' подставляется id записе в дереве (В таблице osTree).
+                                            //'current_id' id в связанной таблице. То есть это target_id из таблицы дерева
                                         }
                                     }
                                 }
@@ -205,15 +209,15 @@ export default {
                             },
                         }
                     },
-                    useUniTree : true,
-                    extendedModResource : true,
-                    rootIds: 0,
+                    useUniTree : true, //Включаем когда есть таблица - дерево и есть связанные таблицы. Если только таблица дерево, то выключаем
+                    extendedModResource : false, //Включаем, если таблица дерево наследует modResource или связано с modResource
+                    rootIds: 0, //С какого узла показывать дерево. Показываются дочерние только (Наверное, потом проверить).
                     idField:'id',
                     parentIdField: 'parent_id',
                     parents_idsField: 'parents_ids',
                     menuindexField: 'menuindex',
                     classField: 'class',
-                    isLeaf:{
+                    isLeaf:{ //Условие какие узлы дерева не имеют дочерних элементов.
                         class:'osEmployee'
                     }
                 },
@@ -250,35 +254,36 @@ export default {
                 }
             },
             osOrg:{
-                table:'osOrg',
-                autocomplete_field:'os_org_id',
-                version:2,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'osOrg', //Название таблицы
+                //class:'osOrg', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_org_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
-                    actions:{
+                    actions:{ // Действия определенные для таблицы. read, create, update, delete стандартные
                         read:{},
                         update:{
-                            groups:'Administrator'
+                            groups:'Administrator' //Можно определить группы пользователей которые могут изменять запись
                         }
                     },
-                    fields:{
-                        id:{
-                            type:'view',
+                    fields:{ // поля таблицы
+                        id:{ //имя поля
+                            type:'view', //тип поля
                         },
-                        name:{
-                            label:'Имя',
-                            type:'text',
+                        name:{ //имя поля
+                            label:'Имя', //подпись поля
+                            type:'text', //тип поля
                         },
                         active:{
                             label:'Включено',
@@ -288,21 +293,22 @@ export default {
                 }
             },
             osFilial:{
-                table:'osFilial',
-                autocomplete_field:'os_filial_id',
-                version:2,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'osFilial', //Название таблицы
+                //class:'osFilial', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_filial_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                     actions:{
                         read:{},
@@ -326,21 +332,22 @@ export default {
                 }
             },
             osDepartment:{
-                table:'osDepartment',
-                autocomplete_field:'os_department_id',
-                version:2,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'osDepartment', //Название таблицы
+                //class:'osDepartment', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_department_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                     actions:{
                         read:{},
@@ -364,21 +371,22 @@ export default {
                 }
             },
             osPost:{
-                table:'osPost',
-                autocomplete_field:'os_post_id',
-                version:1,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'osPost', //Название таблицы
+                //class:'osPost', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_post_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:1, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                     actions:{
                         read:{},
@@ -404,21 +412,22 @@ export default {
                 }
             },
             osEmployee:{
-                table:'osEmployee',
-                autocomplete_field:'os_employee_id',
-                version:2,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'osEmployee', //Название таблицы
+                //class:'osEmployee', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_employee_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                     actions:{
                         read:{},
@@ -452,15 +461,15 @@ export default {
                 }
             },
             osEmployeeChild:{
-                table:'osEmployeeChild',
-                class:'osTree',
-                autocomplete_field:'',
-                version:4,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
+                table:'osEmployeeChild', //Название таблицы
+                class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:4, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
                 properties: {
                     query:{
                         leftJoin:{
@@ -512,14 +521,15 @@ export default {
                 }
             },
             osAccess:{
-                table:'osAccess',
-                autocomplete_field:'os_access_id',
-                version:3,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
+                table:'osAccess', //Название таблицы
+                //class:'osAccess', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_access_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:3, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
                 properties: {
                     actions:{
                         read:{},
@@ -561,56 +571,56 @@ export default {
         }
     },
 
-    modx:{
-        name:'modx',
+    modx:{ //Второй пакет
+        name:'modx', //имя пакета MODX
         gtsAPITables:{
             osModUser:{
-                table:'osModUser',
-                class:'modUser',
-                autocomplete_field:'',
-                version:2,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$username}',
+                table:'osModUser', //Название таблицы
+                class:'modUser', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$username}', // шаблон записей для автокомплект
                         query:{
                             sortby:{
                                 username:'ASC'
                             }
                         },
                         where:{
-                            "username:LIKE":"%query%",
+                            "username:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                 }
             },
             modUserGroup:{
-                table:'modUserGroup',
-                class:'modUserGroup',
-                autocomplete_field:'',
-                version:1,
-                type: 1,
-                authenticated:true,
-                groups:'',
-                permitions:'',
-                active:true,
-                properties: {
-                    autocomplete:{
-                        tpl:'{$name}',
+                table:'modUserGroup', //Название таблицы
+                class:'modUserGroup', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:1, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'', //Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true, // Включено. Можно быстро временно выключить таблицу.
+                properties: { // свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
                         query:{
                             sortby:{
                                 name:'ASC'
                             }
                         },
                         where:{
-                            "name:LIKE":"%query%",
+                            "name:LIKE":"%query%", // Условие поиска в поле
                         },
-                        limit:0,
+                        limit:0, // число показываемых записей при поиске.
                     },
                 }
             },
