@@ -1,0 +1,278 @@
+Для некоторых проектов нужен компонент деревьев. Например, структура организации или дерево ресурсов MODX. Для отображения и управления деревом добавил в gtsAPI-PVTables модуль UniTree.
+<a href="/assets/images/tickets/32/72ae8d6c9b01493a3a872120faec9d69a51455b5.png" title="2025-05-20_03-10-29.png" draggable="false">
+            <img src="/assets/images/tickets/32/thumb/72ae8d6c9b01493a3a872120faec9d69a51455b5.jpg" draggable="false">
+        </a>
+Для того чтобы написать админку MODX на Vue осталось сделать менеджер файлов. Но пока он нам, к сожалению, не нужен и админка на Vue откладывается. Может к концу года понадобится. 
+Компоненты gtsAPI и PVTables я делаю в первую очередь для нас. В них реализовано то, что нам нужно. Но так как это базовые вещи для АПИ сайта на MODX, то может кому-то пригодиться и я их выкладываю.
+Ниже описание модуля UniTree.
+<cut/>
+<b>Особенности</b>
+UniTree сделан так, чтобы работать в 4 вариантах:
+1) Таблица UniTree связанная c другими таблицами. В этом варианте создается таблица-дерево
+<code>
+<object class="osTree" table="orgstructure_tree" extends="xPDOSimpleObject">
+       <field key="parent_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="parents_ids" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="title" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="class" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="target_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="menuindex" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+
+       <index alias="parent_id" name="parent_id" primary="false" unique="false" type="BTREE">
+              <column key="parent_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="parents_ids" name="parents_ids" primary="false" unique="false" type="BTREE">
+              <column key="parents_ids" length="" collation="A" null="false"/>
+       </index>
+       <index alias="title" name="title" primary="false" unique="false" type="BTREE">
+              <column key="title" length="" collation="A" null="false"/>
+       </index>
+       <index alias="class" name="class" primary="false" unique="false" type="BTREE">
+              <column key="class" length="" collation="A" null="false"/>
+       </index>
+       <index alias="target_id" name="target_id" primary="false" unique="false" type="BTREE">
+              <column key="target_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+    </object>
+</code>
+Где class и target_id указывают на объект в другой таблице. Например, есть еще таблица 
+<code>
+<object class="osOrg" table="orgstructure_orgs" extends="xPDOSimpleObject">
+       <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+
+       <index alias="active" name="active" primary="false" unique="false" type="BTREE">
+              <column key="active" length="" collation="A" null="false"/>
+       </index>
+       <index alias="name" name="name" primary="false" unique="false" type="BTREE">
+              <column key="name" length="" collation="A" null="false"/>
+       </index>
+    </object>
+</code>
+В osTree запись class="osOrg", target_id="1" указывают на запись id="1" в таблице osOrg.
+Пример приложения с этим вариантом <a href="https://github.com/tuniekov/OrgStructure">https://github.com/tuniekov/OrgStructure</a>.
+Записи в поле parents_ids имеют вид "#1#4#". Где 1 и 4 id записей родителей. Тогда найти все дочерние записи родителя 4 можно запросом с 
+<code>WHERE parents_ids LIKE '%#4#%'</code>
+В gtsAPI свойствах таблицы надо указать:
+	тип таблицы type: 3,
+	Описания связанных таблиц: gtsAPIUniTreeClass,
+	Использовать таблицу UniTree: properties.useUniTree : true,
+	Расширение таблиц modResource: properties.extendedModResource : false,
+Пример настроек в файле <a href="https://github.com/tuniekov/OrgStructure/blob/main/_build/configs/gtsapipackages.js">https://github.com/tuniekov/OrgStructure/blob/main/_build/configs/gtsapipackages.js</a>
+
+2) Таблица UniTree связанная с таблицей modResource. Этот вариант я вряд ли буду использовать, но вдруг понадобится. 
+В gtsAPI свойствах таблицы надо указать:
+	тип таблицы type: 3,
+	Описания связанных таблиц: gtsAPIUniTreeClass, ( них exdended_modresource: true,)
+	Использовать таблицу UniTree: properties.useUniTree : true,
+	Расширение таблиц modResource: properties.extendedModResource : true,
+
+Пример тестового приложения <a href="https://github.com/tuniekov/TestUniTreeLinkModResourceMode">https://github.com/tuniekov/TestUniTreeLinkModResourceMode</a>.
+
+3) Приложение может взаимодействовать с modResource напрямую без специальной таблицы UniTree.
+В gtsAPI свойствах таблицы надо указать:
+	тип таблицы type: 3,
+	Описания связанных таблиц: Не указываются
+	Использовать таблицу UniTree: properties.useUniTree : false,
+	Расширение таблиц modResource: properties.extendedModResource : true,
+
+Пример тестового приложения <a href="https://github.com/tuniekov/TestUniTreeModResourceMode">https://github.com/tuniekov/TestUniTreeModResourceMode</a>.
+
+4) Приложение можно использовать только с одной таблицей вида таблицы UniTree, добавляя необходимые поля в таблицу.
+
+В gtsAPI свойствах таблицы надо указать:
+	тип таблицы type: 3,
+	Описания связанных таблиц: Не указываются
+	Использовать таблицу UniTree: properties.useUniTree : true,
+	Расширение таблиц modResource: properties.extendedModResource : false,
+
+Пример тестового приложения <a href="https://github.com/tuniekov/TestUniTreeSingleTableMode">https://github.com/tuniekov/TestUniTreeSingleTableMode</a>.
+
+<b>Использование</b>
+
+<b>Создание компонента на основе PVExtra</b>
+0) Устанавливаем на ваш сайт gtsAPI.
+1) В папку Extras в корне сайта клонируем репозиторий заготовки компонентов <a href="https://github.com/tuniekov/PVExtra">https://github.com/tuniekov/PVExtra</a>
+2) В папке Extras создаем файл .env c переменными: VITE_APP_PROTOCOL=http VITE_APP_HOST=site.loc.
+site.loc заменить на домен своего сайта.
+3) Открываем Extras\PVExtra в VSCode. В терминале выполняем:
+<code>npm i</code>
+Затем выполняем:
+<code>npm run copy</code>
+и вводим нужное вам название компонента.
+4) Находим в Extras папку с именем вашего компонента. Открываем ее в VSCode.
+5) В терминале выполняем 
+<code>npm i</code>
+<code>npm run get_token</code>
+Вводим логин и пароль админа сайта. Токен сохраняется в файле site.loc\public\Extras\.env
+
+<b>Создание дерева</b>
+1) В файле core\components\имя_компонента\model\schema\имя_компонента.mysql.schema.xml создаем таблицы базы. Смотрите пример osTree выше.
+2) В _build/config.js включаем создание таблиц базы schema:true.
+3) В файле _build\configs\gtsapipackages.js создаем настройки апи таблиц. Пример:
+<code>
+export default {
+    orgstructure:{
+        name:'orgstructure', //имя пакета MODX
+        gtsAPITables:{
+            osTree:{
+                table:'osTree', //Название таблицы
+                //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно. 
+                autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:13,// при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 3,//тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true, //доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'',//Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true,// Включено. Можно быстро временно выключить таблицу.
+                gtsAPIUniTreeClass:{ // Определения связанных таблиц. Нужны для синхронизации названий записей с таблицей UniTree.
+                    osOrg: {
+                        title_field: 'name', // поле названия в связанной таблице.
+                        svg: //svg картинка таблицы в дереве
+                        `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                            <path d="M12 7v14"></path>
+                            <path d="M8 3h8"></path>
+                        </svg>
+                        `,
+                        // exdended_modresource:0, // указывает, что связанная таблица из modResource
+                    },
+
+                },
+                properties: { // свойства таблицы
+                    actions:{ // Действия определенные для таблицы. Для дерева это действия в раскрывающемся списке дерева.
+                        create:{ //создать
+                            tables:{ // определяет кнопку создать для разных таблиц gtsAPI
+                                osOrg:{ // Для таблицы с именем table="osOrg"
+                                    groups:'Administrator', //Группа пользователей которым разрешено создавать организации
+                                    label:'Создать организацию',
+                                    parent_classes:['root','osOrg'], //'root' можно создавать в корне дерева. 'osOrg' можно создавать организации дочерние к организациям 
+                                    cls: 'p-button-rounded p-button-info',
+                                    form:'UniTree', // пока нужно. Предустановленная форма для создания узла дерева.
+                                    add_fields: { //добавочные поля в форму
+                                        active: {
+                                            label: 'Включено',
+                                            type: 'boolean',
+                                            default: 1,
+                                        },
+                                    }
+                                },
+                            }
+                        },
+                        delete:{ // удалить узел дерева
+                            groups:'Administrator' // разрешено только администраторам.
+                        },
+                    },
+                    nodeclick:{ //Действия при клике на узел дерева
+                        classes:{ // Определяет действие при клике для разных классов узла
+                            osOrg:{ //Для класс osOrg в панели связанной с деревом показывает табы
+                                label: 'Организация', //подпись панели
+                                tabs:{ //конфигурация табов
+                                    main:{ //таб
+                                        type:'form', //В табе форма редактирования
+                                        title:'Основное', // подпись таба
+                                        table:'osOrg', //Таблица gtsAPI с редактируемыми записями
+                                    },
+                                    employees:{
+                                        type:'table', //В табе отображается таблица
+                                        title:'Сотрудники', // подпись таба
+                                        table:'osEmployeeChild',//Таблица gtsAPI с редактируемыми записями
+                                        where:{ //Фильтр записей в таблице
+                                            parents_ids: 'tree_id' //parents_ids: особое условие, что отбираются записи дочерние id заданному в parents_ids
+                                            //'tree_id' подставляется id записи в дереве (В таблице osTree).
+                                            //'current_id' id в связанной таблице. То есть это target_id из таблицы дерева
+                                        }
+                                    }
+                                }
+                            },
+                        }
+                    },
+                    useUniTree : true, //Включаем когда есть таблица - дерево и есть связанные таблицы. Если только таблица дерево, то выключаем
+                    extendedModResource : false, //Включаем, если таблица дерево наследует modResource или связано с modResource
+                    rootIds: 0, //С какого узла показывать дерево. Показываются дочерние только (Наверное, потом проверить).
+                    idField:'id',
+                    parentIdField: 'parent_id',
+                    parents_idsField: 'parents_ids',
+                    menuindexField: 'menuindex',
+                    classField: 'class',
+                    isLeaf:{ //Условие какие узлы дерева не имеют дочерних элементов.
+                        class:'osEmployee'
+                    }
+                },
+            },
+            osOrg:{
+                table:'osOrg', //Название таблицы
+                //class:'osOrg', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                autocomplete_field:'os_org_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
+                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                type: 1,//тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
+                authenticated:true,//доступ к таблице только аутентифицированным пользователям
+                groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
+                permitions:'',//Можно определить разрешения MODX для которых будет разрешён доступ.
+                active:true,// Включено. Можно быстро временно выключить таблицу.
+                properties: {// свойства таблицы
+                    autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
+                        tpl:'{$name}', // шаблон записей для автокомплект
+                        where:{
+                            "name:LIKE":"%query%", // Условие поиска в поле
+                        },
+                        limit:0, // число показываемых записей при поиске.
+                    },
+                    actions:{// Действия определенные для таблицы. read, create, update, delete стандартные
+                        read:{},
+                        update:{
+                            groups:'Administrator' //Можно определить группы пользователей которые могут изменять запись
+                        }
+                    },
+                    fields:{// поля таблицы
+                        id:{//имя поля
+                            type:'view',//тип поля
+                        },
+                        name:{//имя поля
+                            label:'Имя',//подпись поля
+                            type:'text',//тип поля
+                        },
+                        active:{
+                            label:'Включено',
+                            type:'boolean',
+                        },
+                    }
+                }
+            },
+        }
+    },
+}
+
+</code>
+4) В файле src\App.vue используем компонент UniTreePanel из PVTables:
+<code>
+<template>
+  <div id="orgstructure">
+    <UniTreePanel :treetabs="treetabs"/>
+  </div>
+</template>
+
+<script setup>
+  import { UniTreePanel } from 'pvtables/dist/pvtables'
+  import { ref } from 'vue'
+
+  const treetabs = ref({
+    osTree:{ //Имя таба
+      type:'tree', // тип таба
+      title: 'Структура организации', // подпись таба
+      table: 'osTree', // Таблица дерева заданная в _build\configs\gtsapipackages.js
+      dragable: true // перемещать узлы
+    },
+  });
+</script>
+</code>
+
+И осталось только собрать компонент:
+<code>npm run build</code>
+При сборке создастся транспортный пакет, который можно будет устанавливать на другие сайты, где установлен gtsAPI.
