@@ -4,9 +4,9 @@ export default {
         gtsAPITables:{
             osTree:{
                 table:'osTree', //Название таблицы
-                //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно. 
+                //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:13, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:16, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 3, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -106,7 +106,7 @@ export default {
                                     }
                                 },
                                 osEmployee:{
-                                    groups:'Administrator,hr',
+                                    groups:'Administrator,hr,Отдел кадров',
                                     label:'Создать сотрудника',
                                     parent_classes:['osFilial', 'osDepartment'],
                                     cls: 'p-button-rounded p-button-info',
@@ -126,6 +126,9 @@ export default {
                                     }
                                 },
                             }
+                        },
+                        update:{ // обновить узел (нужно для drag-and-drop — меняет parent_id, menuindex, parents_ids)
+                            groups:'Administrator,hr,Отдел кадров'
                         },
                         delete:{ // удалить узел дерева
                             groups:'Administrator' // разрешено только администраторам.
@@ -342,7 +345,7 @@ export default {
                 table:'osDepartment', //Название таблицы
                 //class:'osDepartment', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'os_department_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:3, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -372,6 +375,10 @@ export default {
                         },
                         active:{
                             label:'Включено',
+                            type:'boolean',
+                        },
+                        sync_to_zeh:{
+                            label:'Синхронизировать в Цех',
                             type:'boolean',
                         },
                     }
@@ -422,7 +429,7 @@ export default {
                 table:'osEmployee', //Название таблицы
                 //class:'osEmployee', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'os_employee_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:2, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:3, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -439,7 +446,7 @@ export default {
                     actions:{
                         read:{},
                         update:{
-                            groups:'Administrator,hr'
+                            groups:'Administrator,hr,Отдел кадров'
                         }
                     },
                     fields:{
@@ -471,7 +478,7 @@ export default {
                 table:'osEmployeeChild', //Название таблицы
                 class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:4, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:6, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -496,20 +503,23 @@ export default {
                     actions:{
                         read:{},
                         update:{
-                            groups:'Administrator,hr'
+                            groups:'Administrator,hr,Отдел кадров'
                         }
                     },
                     fields:{
                         id:{
                             type:'view',
+                            class:'osEmployee',  // основная таблица — osEmployee, иначе фильтр уйдёт в osTree.id
                         },
                         name:{
                             label:'ФИО сотрудника',
                             type:'text',
+                            class:'osEmployee',
                         },
                         active:{
                             label:'Активен',
                             type:'boolean',
+                            class:'osEmployee',
                             filter:{
                                 value: 1, matchMode: 'equals'
                             }
@@ -518,11 +528,13 @@ export default {
                             label:'Пользователь',
                             type:'autocomplete',
                             table:'osModUser',
+                            class:'osEmployee',
                         },
                         post_id:{
                             label:'Должность',
                             type:'autocomplete',
                             table:'osPost',
+                            class:'osEmployee',
                         },
                     }
                 }

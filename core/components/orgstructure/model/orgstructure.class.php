@@ -14,8 +14,6 @@ class OrgStructure
     public $timings = [];
     protected $start = 0;
     protected $time = 0;
-    public $gtsShop;
-    public $getTables;
     /**
      * @param modX $modx
      * @param array $config
@@ -39,14 +37,10 @@ class OrgStructure
         ], $config);
 
         $this->modx->addPackage('orgstructure', $this->config['modelPath']);
-        $this->gtsShop = $modx->getService("gtsShop","gtsShop",
-            MODX_CORE_PATH."components/gtsshop/model/",[]);
+        // Пакет gtsbalance даёт xPDO классы gtsBStaff, gtsBPost, gtsBDepartment,
+        // gtsBDepartmentStaffLink — нужны для миграции и обратной синхронизации.
+        $this->modx->addPackage('gtsbalance', MODX_CORE_PATH . 'components/gtsbalance/model/');
         //$this->modx->lexicon->load('orgstructure:default');
-        $gettables_core_path = $this->modx->getOption('gettables_core_path',null, MODX_CORE_PATH . 'components/gettables/core/');
-        $gettables_core_path = str_replace('[[+core_path]]', MODX_CORE_PATH, $gettables_core_path);
-        if ($this->modx->loadClass('gettables', $gettables_core_path, false, true)) {
-            $this->getTables = new getTables($this->modx, []);
-        }
 
         if ($this->pdo = $this->modx->getService('pdoFetch')) {
             $this->pdo->setConfig($this->config);
@@ -136,7 +130,465 @@ class OrgStructure
             'osTree' => [
                 'gtsapifunc' => 'filterTreeByAccess',
             ],
+            'osEmployee' => [
+                'gtsapifunc' => 'syncEmployeeToLegacy',
+            ],
         ];
+    }
+
+    /**
+     * Маппинг старого gtsBDepartment.id → новый osDepartment.id.
+     * Используется как при миграции, так и при обратной синхронизации (через reverse).
+     *   - все «Цех» и его дочерние (включая «Цех Паша») → osDepartment id=3 (Цех)
+     *   - ИТР (id=17) → osDepartment id=2 (Офис)
+     *   - Якутия (закрылась) → null = пропуск
+     *   - неактивные/служебные → null
+     */
+    public function getLegacyDeptMap()
+    {
+        // Базовые соответствия по статичным id. Спец-случаи (типа ИТР, у которого
+        // отдельный osDepartment с разрешаемым по имени id) переопределяются
+        // в migrateFromOld через resolveDeptMapWithDynamic().
+        return [
+            // Прямые
+            2  => 2,  // Офис → Офис
+            12 => 4,  // охрана → Охрана
+            13 => 5,  // Склад → Склад отгрузки (default; поправить если надо в Склад производства=6)
+            16 => 3,  // Монтажники → Цех (default)
+            17 => 2,  // ИТР → Офис fallback (переопределяется на новый osDepartment 'ИТР' если есть)
+
+            // Цех Паша + старый Цех + все их дочерние → новый Цех (id=3)
+            1  => 3, 20 => 3,
+            3  => 3, 4  => 3, 5  => 3, 6  => 3, 7  => 3, 8  => 3, 9  => 3,
+            10 => 3, 11 => 3, 14 => 3, 15 => 3, 19 => 3, 21 => 3, 27 => 3,
+            28 => 3, 29 => 3,
+
+            // Закрытое / неактивное → пропуск
+            18 => null,  // Зачистка сварных швов (active=0)
+            22 => null, 23 => null, 24 => null, 25 => null, 26 => null,  // Якутия
+            30 => null,  // не определен наряд (active=0)
+        ];
+    }
+
+    /**
+     * Карта спец-правил для миграции: post.name → osDepartment.name.
+     * Если у сотрудника такая должность — он автоматически уходит в этот отдел,
+     * независимо от его старого department_id в legacy. Это уменьшает ручной
+     * разбор «не распределённых» для кадровика.
+     *
+     * Добавлять новые правила одной строкой: 'Имя должности' => 'Имя отдела'.
+     */
+    public function getPostToDepartmentMap()
+    {
+        return [
+            'ИТР'                => 'ИТР',
+            'Слесарь-жестянщик'  => 'Цех',
+            // Сюда добавлять новые правила по типу 'имя_должности' => 'имя_отдела'
+        ];
+    }
+
+    /**
+     * Гарантирует существование osDepartment «Не распределённые» под Красноярск
+     * + узла в osTree. Используется как fallback при миграции для сотрудников
+     * с пустым department_id.
+     *
+     * @param array &$deptTreeCache кэш osTree узлов (osDepartment.id → osTree)
+     * @return int|null osDepartment.id или null если не получилось создать
+     */
+    protected function ensureUnassignedDepartment(&$deptTreeCache)
+    {
+        $name = 'Не распределённые';
+        $dept = $this->modx->getObject('osDepartment', ['name' => $name]);
+        if (!$dept) {
+            $dept = $this->modx->newObject('osDepartment', [
+                'name'        => $name,
+                'active'      => 1,
+                'sync_to_zeh' => 0,
+            ]);
+            if (!$dept->save()) return null;
+        }
+        $deptId = (int)$dept->get('id');
+
+        // osTree узел: ищем существующий, если нет — создаём под филиалом Красноярск
+        $tree = $this->modx->getObject('osTree', [
+            'class'     => 'osDepartment',
+            'target_id' => $deptId,
+        ]);
+        if (!$tree) {
+            // Находим узел Красноярск (osFilial). Если несколько филиалов —
+            // берём первый osFilial-узел (для текущей модели достаточно).
+            $filialTree = $this->modx->getObject('osTree', ['class' => 'osFilial']);
+            if (!$filialTree) return $deptId; // нет филиала — отдел есть, но без узла
+            $tree = $this->modx->newObject('osTree', [
+                'class'       => 'osDepartment',
+                'target_id'   => $deptId,
+                'parent_id'   => (int)$filialTree->get('id'),
+                'parents_ids' => $filialTree->get('parents_ids') . $filialTree->get('id') . '#',
+                'title'       => $name,
+                'active'      => 1,
+                'menuindex'   => 999,  // в конце списка отделов
+            ]);
+            if (!$tree->save()) return $deptId;
+        }
+        $deptTreeCache[$deptId] = $tree;
+        return $deptId;
+    }
+
+    /**
+     * Возвращает getLegacyDeptMap с переопределениями по name-lookup.
+     * Это нужно для случаев где новый osDepartment создаётся вручную позже
+     * (например «ИТР» под Офис) и его id неизвестен на момент написания карты.
+     * Если такого нового отдела нет — остаётся fallback из getLegacyDeptMap.
+     */
+    protected function resolveDeptMapWithDynamic()
+    {
+        $map = $this->getLegacyDeptMap();
+        // Спец: gtsBDepartment.id=17 (ИТР) — если есть osDepartment с именем 'ИТР'
+        // (он создаётся вручную как дочерний под Офис), используем его id.
+        $itr = $this->modx->getObject('osDepartment', ['name' => 'ИТР']);
+        if ($itr) $map[17] = (int)$itr->get('id');
+        return $map;
+    }
+
+    /**
+     * Определяет legacy gtsBDepartment.id для сотрудника.
+     * Поднимается от сотрудника по osTree и проверяет sync_to_zeh у КАЖДОГО
+     * osDepartment в пути:
+     *   - если хотя бы один в пути имеет sync_to_zeh=1 → legacy = 1 (Цех Паша)
+     *   - иначе → legacy = 2 (Офис)
+     *
+     * Это позволяет ставить галку как на корневом отделе (тогда все его дочерние
+     * наследуют), так и на конкретном дочернем (например ИТР под Офисом — только
+     * сотрудники ИТР пойдут в Цех Паша, остальные Офиса останутся в Офисе).
+     *
+     * @param int $empId osEmployee.id
+     * @return int legacy department_id (1=Цех Паша или 2=Офис fallback)
+     */
+    public function resolveLegacyDeptId($empId)
+    {
+        $empTree = $this->modx->getObject('osTree', [
+            'class'     => 'osEmployee',
+            'target_id' => (int)$empId,
+        ]);
+        if (!$empTree) return 2;
+
+        $maxDepth = 20;
+        $node = $this->modx->getObject('osTree', (int)$empTree->get('parent_id'));
+        while ($node && $node->get('class') === 'osDepartment' && $maxDepth-- > 0) {
+            $dept = $this->modx->getObject('osDepartment', (int)$node->get('target_id'));
+            if ($dept && (int)$dept->get('sync_to_zeh') === 1) {
+                return 1; // нашли отдел с sync_to_zeh — Цех Паша
+            }
+            $node = $this->modx->getObject('osTree', (int)$node->get('parent_id'));
+        }
+        return 2; // ни одного флага по пути — Офис
+    }
+
+    /**
+     * Поднимается по osTree от узла сотрудника к корневому osDepartment
+     * (тому что лежит непосредственно под osFilial). Возвращает target_id
+     * этого корневого osDepartment.
+     *
+     * Используется в syncEmployeeToLegacy чтобы для дочерних отделов
+     * автоматически находить корневой и брать legacy department_id из карты.
+     *
+     * @param int $empId osEmployee.id
+     * @return int|null target_id корневого osDepartment или null если не найден
+     */
+    public function findRootOsDepartmentId($empId)
+    {
+        $empTree = $this->modx->getObject('osTree', [
+            'class'     => 'osEmployee',
+            'target_id' => (int)$empId,
+        ]);
+        if (!$empTree) return null;
+
+        // Защита от глубоких циклов / гнилых данных
+        $maxDepth = 20;
+        $node = $this->modx->getObject('osTree', (int)$empTree->get('parent_id'));
+        while ($node && $maxDepth-- > 0) {
+            if ($node->get('class') !== 'osDepartment') {
+                // Поднялись выше osDepartment (например достигли osFilial без департамента —
+                // не должно случаться, но защищаемся)
+                return null;
+            }
+            // Проверяем родителя: если он не osDepartment — значит текущий и есть корневой
+            $parent = $this->modx->getObject('osTree', (int)$node->get('parent_id'));
+            if (!$parent || $parent->get('class') !== 'osDepartment') {
+                return (int)$node->get('target_id');
+            }
+            $node = $parent;
+        }
+        return null;
+    }
+
+    /**
+     * Идемпотентная миграция: gts_balance_posts → osPost, gts_balance_staff → osEmployee + osTree.
+     * Запускать как action или из MODX shell. При повторном запуске не дублирует.
+     *
+     * Идентификаторы переносятся 1:1 (osPost.id = gtsBPost.id, osEmployee.id = gtsBStaff.id) —
+     * это упрощает обратную синхронизацию и сохранение связей в legacy-данных.
+     *
+     * Мигрируем всех сотрудников (active=0 в том числе) — они нужны бухгалтерии.
+     *
+     * @param array $data (не используется, нужен для action-вызова)
+     * @return array
+     */
+    public function migrateFromOld($data = [])
+    {
+        $stats = [
+            'cleared_employees'   => 0,
+            'cleared_emp_trees'   => 0,
+            'cleared_links'       => 0,
+            'posts_created'   => 0,
+            'posts_updated'   => 0,
+            'staff_created'   => 0,
+            'staff_updated'   => 0,
+            'staff_skipped'   => 0,
+            'tree_created'    => 0,
+            'tree_updated'    => 0,
+            'errors'          => [],
+        ];
+
+        // Полная очистка перед миграцией: чтобы повторный запуск стартовал с чистого
+        // листа и не было «зависших» osEmployee/osTree-узлов от прошлых попыток.
+        // gtsBStaff не трогаем — он остаётся живой в legacy и пересоздастся через xPDO save.
+        $stats['cleared_emp_trees'] = $this->modx->getCount('osTree', ['class' => 'osEmployee']);
+        $this->modx->removeCollection('osTree', ['class' => 'osEmployee']);
+        $stats['cleared_employees'] = $this->modx->getCount('osEmployee');
+        $this->modx->removeCollection('osEmployee', []);
+        // gtsBDepartmentStaffLink пересобираем полностью — этот компонент теперь
+        // источник истины для связей (через sync_to_zeh).
+        $stats['cleared_links'] = $this->modx->getCount('gtsBDepartmentStaffLink');
+        $this->modx->removeCollection('gtsBDepartmentStaffLink', []);
+
+        // 1. Должности: gtsBPost → osPost (id точь-в-точь)
+        $oldPosts = $this->modx->getCollection('gtsBPost');
+        foreach ($oldPosts as $oldPost) {
+            $oldId = (int)$oldPost->get('id');
+            $name = trim((string)$oldPost->get('name'));
+            if ($name === '') continue;
+
+            $newPost = $this->modx->getObject('osPost', $oldId);
+            $isNew = false;
+            if (!$newPost) {
+                $newPost = $this->modx->newObject('osPost');
+                $newPost->set('id', $oldId);
+                $isNew = true;
+            }
+            $newPost->set('name', $name);
+            if ($newPost->save()) {
+                $isNew ? $stats['posts_created']++ : $stats['posts_updated']++;
+            }
+        }
+
+        // 2. Сотрудники: gtsBStaff → osEmployee + osTree узел (id точь-в-точь, все включая active=0)
+        // Используем resolveDeptMapWithDynamic — он подхватит созданный вручную «ИТР» под Офисом.
+        $deptMap = $this->resolveDeptMapWithDynamic();
+
+        // Кэш osTree узлов отделов: osDepartment.id → osTree объект
+        $deptTreeCache = [];
+        $deptTrees = $this->modx->getCollection('osTree', ['class' => 'osDepartment']);
+        foreach ($deptTrees as $dt) {
+            $deptTreeCache[(int)$dt->get('target_id')] = $dt;
+        }
+
+        // Гарантируем существование отдела «Не распределённые» под Красноярск —
+        // fallback для сотрудников с department_id=NULL в legacy gtsBStaff.
+        // Кадровик через UI постепенно перетаскивает их в нужные отделы.
+        $unassignedDeptId = $this->ensureUnassignedDepartment($deptTreeCache);
+
+        // Спец-правила: должность → отдел. Перебивают маппинг по department_id legacy,
+        // чтобы кадровику не пришлось вручную растаскивать «и так понятные» должности.
+        $postToDept = [];
+        foreach ($this->getPostToDepartmentMap() as $postName => $deptName) {
+            $post = $this->modx->getObject('osPost', ['name' => $postName]);
+            $dept = $this->modx->getObject('osDepartment', ['name' => $deptName]);
+            if ($post && $dept) {
+                $postToDept[(int)$post->get('id')] = (int)$dept->get('id');
+            }
+        }
+
+        // Сотрудников читаем отсортированными по имени, чтобы при назначении menuindex
+        // в дереве они оказались в алфавитном порядке внутри отдела.
+        $c = $this->modx->newQuery('gtsBStaff');
+        $c->sortby('name', 'ASC');
+        $oldStaffs = $this->modx->getCollection('gtsBStaff', $c);
+
+        // Счётчики menuindex по newDeptId — каждому новому узлу выдаём
+        // уникальный порядковый номер в рамках его отдела.
+        $menuindexCounters = [];
+
+        foreach ($oldStaffs as $old) {
+            $oldId = (int)$old->get('id');
+            $oldDeptId = (int)$old->get('department_id');
+            $name = trim((string)$old->get('name'));
+            $userId = (int)$old->get('modx_user_id');
+            $postId = (int)$old->get('post_id');
+            $active = (int)$old->get('active');
+
+            // Маппинг отдела
+            $newDeptId = null;
+            if ($oldDeptId && array_key_exists($oldDeptId, $deptMap)) {
+                $newDeptId = $deptMap[$oldDeptId];
+            }
+            // Fallback для NULL/0 department_id в legacy → «Не распределённые».
+            // Якутия и неактивные старые отделы (mapped в null) → остаются без узла
+            // (их сотрудников фактически нет, но если будут — пропустятся по умолчанию).
+            if ($newDeptId === null && !$oldDeptId && $unassignedDeptId) {
+                $newDeptId = $unassignedDeptId;
+            }
+
+            // Спец-правила post → dept: должность перебивает любой dept
+            if (isset($postToDept[$postId])) {
+                $newDeptId = $postToDept[$postId];
+            }
+
+            // osEmployee с фиксированным id (1:1 с gtsBStaff)
+            $emp = $this->modx->getObject('osEmployee', $oldId);
+            $isNew = false;
+            if (!$emp) {
+                $emp = $this->modx->newObject('osEmployee');
+                $emp->set('id', $oldId);
+                $isNew = true;
+            }
+            $emp->fromArray([
+                'name'    => $name,
+                'active'  => $active,
+                'user_id' => $userId ?: 0,
+                'post_id' => $postId ?: 0,
+            ]);
+            if (!$emp->save()) {
+                $stats['errors'][] = "Не сохранился osEmployee id={$oldId} '{$name}'";
+                continue;
+            }
+            $isNew ? $stats['staff_created']++ : $stats['staff_updated']++;
+
+            // osTree узел только если есть валидный новый dept
+            if ($newDeptId === null || !isset($deptTreeCache[$newDeptId])) {
+                $stats['staff_skipped']++; // мигрирован, но без места в дереве
+                continue;
+            }
+            $deptTree = $deptTreeCache[$newDeptId];
+
+            $empTree = $this->modx->getObject('osTree', [
+                'class'     => 'osEmployee',
+                'target_id' => $oldId,
+            ]);
+            $treeIsNew = false;
+            if (!$empTree) {
+                $empTree = $this->modx->newObject('osTree', [
+                    'class'     => 'osEmployee',
+                    'target_id' => $oldId,
+                ]);
+                $treeIsNew = true;
+            }
+            // Уникальный menuindex в рамках отдела (по алфавиту имён, благодаря
+            // sortby выше).
+            if (!isset($menuindexCounters[$newDeptId])) {
+                $menuindexCounters[$newDeptId] = 0;
+            }
+            $menuindex = $menuindexCounters[$newDeptId]++;
+
+            $empTree->fromArray([
+                'parent_id'   => (int)$deptTree->get('id'),
+                'parents_ids' => $deptTree->get('parents_ids') . $deptTree->get('id') . '#',
+                'title'       => $name,
+                'active'      => $active,
+                'menuindex'   => $menuindex,
+            ]);
+            if ($empTree->save()) {
+                $treeIsNew ? $stats['tree_created']++ : $stats['tree_updated']++;
+            }
+
+            // Синхронизация gts_departarment_staff_links для legacy-компонентов.
+            // Удаляем все старые связи этого сотрудника, создаём одну новую через
+            // флаг sync_to_zeh корневого osDepartment.
+            $legacyDeptId = $this->resolveLegacyDeptId($oldId);
+            $this->modx->removeCollection('gtsBDepartmentStaffLink', ['staff_id' => $oldId]);
+            $link = $this->modx->newObject('gtsBDepartmentStaffLink', [
+                'staff_id'      => $oldId,
+                'department_id' => $legacyDeptId,
+            ]);
+            $link->save();
+        }
+
+        return $this->success('Миграция завершена', $stats);
+    }
+
+    /**
+     * Триггер обратной синхронизации osEmployee → gtsBStaff.
+     * При CRUD osEmployee обновляет соответствующую gtsBStaff чтобы старые
+     * компоненты (gtsBalance, табели, отчёты) продолжали видеть сотрудника.
+     *
+     * Связь по id 1:1 (osEmployee.id == gtsBStaff.id), post_id тоже 1:1.
+     * Для department — обратная карта osDepartment.id → gtsBDepartment.id.
+     */
+    public function syncEmployeeToLegacy(&$params)
+    {
+        if ($params['type'] !== 'after') return $this->success();
+        $method = $params['method'];
+        if (!in_array($method, ['create', 'update', 'delete'], true)) return $this->success();
+
+        // Берём данные. Для delete — из object_old, иначе из сохранённого xPDO-объекта.
+        if ($method === 'delete') {
+            $data = isset($params['object_old']) ? $params['object_old'] : [];
+        } else {
+            $obj = isset($params['object']) ? $params['object'] : null;
+            if ($obj && is_object($obj)) {
+                $data = $obj->toArray();
+            } else {
+                $data = isset($params['object_new']) ? $params['object_new'] : [];
+            }
+        }
+
+        $empId  = (int)($data['id'] ?? 0);
+        if (!$empId) return $this->success();
+
+        $name   = trim((string)($data['name'] ?? ''));
+        $userId = (int)($data['user_id'] ?? 0);
+        $postId = (int)($data['post_id'] ?? 0);
+        $active = (int)($data['active'] ?? 0);
+
+        // Связь по id 1:1
+        $staff = $this->modx->getObject('gtsBStaff', $empId);
+
+        if ($method === 'delete') {
+            // Не удаляем gtsBStaff (могут быть связи с балансами/табелями), деактивируем.
+            if ($staff) {
+                $staff->set('active', 0);
+                $staff->save();
+            }
+            return $this->success();
+        }
+
+        // Определяем legacy department_id через флаг sync_to_zeh корневого osDepartment
+        $oldDeptId = $this->resolveLegacyDeptId($empId);
+
+        if (!$staff) {
+            $staff = $this->modx->newObject('gtsBStaff');
+            $staff->set('id', $empId);
+        }
+        $staff->fromArray([
+            'name'          => $name,
+            'modx_user_id'  => $userId ?: null,
+            'department_id' => $oldDeptId,
+            'post_id'       => $postId ?: null,
+            'active'        => $active,
+        ]);
+        $staff->save();
+
+        // Синхронизация связующей таблицы gts_departarment_staff_links
+        // (используется StaffWorkload и другими legacy-компонентами для распределения нарядов).
+        // Удаляем все старые связи этого сотрудника и создаём одну с правильным dept.
+        $this->modx->removeCollection('gtsBDepartmentStaffLink', ['staff_id' => $empId]);
+        $link = $this->modx->newObject('gtsBDepartmentStaffLink', [
+            'staff_id'      => $empId,
+            'department_id' => $oldDeptId,
+        ]);
+        $link->save();
+
+        return $this->success();
     }
     
     /**

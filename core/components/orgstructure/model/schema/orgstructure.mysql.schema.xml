@@ -60,12 +60,19 @@
     <object class="osDepartment" table="orgstructure_departments" extends="xPDOSimpleObject">
        <field key="name" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+       <!-- Флаг для обратной синхронизации в legacy gts_departarment_staff_links:
+            если 1 — сотрудники этого отдела (и дочерних) попадают в Цех Паша (id=1),
+            иначе в Офис (id=2). См. OrgStructure::syncEmployeeToLegacy. -->
+       <field key="sync_to_zeh" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
 
        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
               <column key="active" length="" collation="A" null="false"/>
        </index>
        <index alias="name" name="name" primary="false" unique="false" type="BTREE">
               <column key="name" length="" collation="A" null="false"/>
+       </index>
+       <index alias="sync_to_zeh" name="sync_to_zeh" primary="false" unique="false" type="BTREE">
+              <column key="sync_to_zeh" length="" collation="A" null="false"/>
        </index>
     </object>
     <object class="osPost" table="orgstructure_posts" extends="xPDOSimpleObject">
