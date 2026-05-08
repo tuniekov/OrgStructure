@@ -6,7 +6,7 @@ export default {
                 table:'osTree', //Название таблицы
                 //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:18, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:19, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 3, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -92,7 +92,7 @@ export default {
                                     }
                                 },
                                 osDepartment:{
-                                    groups:'Administrator',
+                                    groups:'Administrator,hr,Отдел кадров',
                                     label:'Создать отдел',
                                     parent_classes:['osFilial', 'osDepartment'],
                                     cls: 'p-button-rounded p-button-info',
@@ -345,7 +345,7 @@ export default {
                 table:'osDepartment', //Название таблицы
                 //class:'osDepartment', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'os_department_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:3, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:4, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -362,7 +362,7 @@ export default {
                     actions:{
                         read:{},
                         update:{
-                            groups:'Administrator'
+                            groups:'Administrator,hr,Отдел кадров'
                         }
                     },
                     fields:{
