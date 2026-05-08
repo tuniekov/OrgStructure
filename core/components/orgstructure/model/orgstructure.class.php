@@ -609,8 +609,8 @@ class OrgStructure
         // Получаем ID текущего пользователя
         $userId = $this->modx->user->get('id');
         
-        // Если пользователь администратор, не применяем фильтрацию
-        if ($this->modx->user->isMember('Administrator')) {
+        // Администраторы и HR видят всё дерево без osAccess-записей
+        if ($this->modx->user->isMember(['Administrator', 'hr', 'Отдел кадров'])) {
             return $this->success();
         }
         //для демо
