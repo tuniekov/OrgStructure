@@ -528,7 +528,9 @@ class OrgStructure
     {
         if ($params['type'] !== 'after') return $this->success();
         $method = $params['method'];
-        if (!in_array($method, ['create', 'update', 'delete'], true)) return $this->success();
+        // 'nodedrop' — после drag-drop в osTree (приходит из gtsAPI tree.class.php).
+        // Логика дальше та же, что и для обычного update.
+        if (!in_array($method, ['create', 'update', 'nodedrop', 'delete'], true)) return $this->success();
 
         // Берём данные. Для delete — из object_old, иначе из сохранённого xPDO-объекта.
         if ($method === 'delete') {
