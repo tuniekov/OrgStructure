@@ -16,7 +16,7 @@ MODX-компонент управления **организационной с
 | `osTree` | `orgstructure_tree` | Универсальное дерево: `parent_id`, `parents_ids` (path), `title`, `class`, `target_id`, `menuindex`, `active` |
 | `osOrg` | `orgstructure_orgs` | Организации (`name`, `active`) |
 | `osFilial` | `orgstructure_filials` | Филиалы (+ `default`) |
-| `osDepartment` | `orgstructure_departments` | Отделы |
+| `osDepartment` | `orgstructure_departments` | Отделы (+ `sync_to_zeh` — флаг обратной синхронизации в legacy, см. ниже) |
 | `osPost` | `orgstructure_posts` | Должности |
 | `osEmployee` | `orgstructure_employees` | Сотрудники (+ связь с `modUser` через `user_id`) |
 | `osAccess` | `orgstructure_access` | Права на узлы дерева: `tree_id` × (`user_id` ∨ `group_id`), `active` |
@@ -46,6 +46,24 @@ MODX-компонент управления **организационной с
   5. Фильтруем `params['object_old']['rows']` по этому набору и возвращаем.
 
 `parents_ids` хранится как `#1#5#23#` — material path для быстрого LIKE-поиска предков и потомков без рекурсии.
+
+## Обратная синхронизация в legacy (`sync_to_zeh`)
+
+`osDepartment.sync_to_zeh` (tinyint, default 0) — флаг **обратной совместимости со старой плоской моделью** «Цех / Офис», которая хранилась в `gtsBDepartmentStaffLink`. Нужен для того, чтобы существующие модули ERP, читающие старую таблицу, продолжали корректно различать «производство» (Цех Паша, legacy `gtsBDepartment.id=1`) и «администрацию» (Офис, legacy id=2) при новой N-уровневой структуре отделов.
+
+**Семантика:** флаг ставится на родительский отдел; **все** сотрудники этого отдела **и любых дочерних** считаются «цеховыми».
+
+**Логика резолва** (`OrgStructure::resolveLegacyDepartmentId`, вызывается из `syncEmployeeToLegacy`):
+- От узла сотрудника поднимаемся по `osTree` вверх.
+- Для каждого узла-`osDepartment` в пути читаем `sync_to_zeh`.
+- Если **хотя бы один** в пути имеет `sync_to_zeh=1` → legacy `department_id = 1` (Цех Паша).
+- Иначе → `department_id = 2` (Офис).
+
+**Триггеры обратной синхронизации:**
+- `syncEmployeeToLegacy` (gtsapifunc на `osEmployee`) — пересобирает запись `gtsBDepartmentStaffLink` и `gtsBStaff` для сотрудника после CRUD над `osEmployee` (create/update/nodedrop/delete).
+- `syncDepartmentToLegacy` (gtsapifunc на `osDepartment`, только `update`) — реагирует на смену флага `sync_to_zeh`: находит всех `osEmployee` под этим отделом (включая вложенные) по `osTree.parents_ids LIKE '%#deptTreeId#%'` и пересобирает их legacy-связи. Срабатывает только если флаг реально изменился — пустые update'ы (правка name/active) не триггерят массовый пересбор.
+
+Поле `sync_to_zeh` проиндексировано (BTREE) — резолв быстрый.
 
 ## Конфигурация gtsAPI (`_build/configs/gtsapipackages.js`, 636 строк)
 

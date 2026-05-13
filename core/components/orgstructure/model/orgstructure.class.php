@@ -133,6 +133,9 @@ class OrgStructure
             'osEmployee' => [
                 'gtsapifunc' => 'syncEmployeeToLegacy',
             ],
+            'osDepartment' => [
+                'gtsapifunc' => 'syncDepartmentToLegacy',
+            ],
         ];
     }
 
@@ -592,7 +595,87 @@ class OrgStructure
 
         return $this->success();
     }
-    
+
+    /**
+     * Триггер обратной синхронизации osDepartment → gtsBStaff/gtsBDepartmentStaffLink
+     * при смене флага sync_to_zeh.
+     *
+     * Меняем флаг у отдела → все сотрудники под ним (включая вложенные отделы)
+     * меняют legacy department_id (1=Цех Паша / 2=Офис) — без этого legacy-компоненты
+     * (StaffWorkload, отчёты, балансы) видели бы старое распределение пока не передёрнешь
+     * каждого сотрудника вручную.
+     *
+     * Реагируем только на update и только если sync_to_zeh реально изменился —
+     * иначе пустые update'ы (правка name/active) триггерили бы массовый пересбор.
+     */
+    public function syncDepartmentToLegacy(&$params)
+    {
+        if ($params['type'] !== 'after') return $this->success();
+        if ($params['method'] !== 'update') return $this->success();
+
+        $newObj  = isset($params['object']) ? $params['object'] : null;
+        $newData = ($newObj && is_object($newObj)) ? $newObj->toArray()
+                                                  : (isset($params['object_new']) ? $params['object_new'] : []);
+        $oldData = isset($params['object_old']) ? $params['object_old'] : [];
+
+        $deptId  = (int)($newData['id'] ?? 0);
+        if (!$deptId) return $this->success();
+
+        $newFlag = (int)($newData['sync_to_zeh'] ?? 0);
+        $oldFlag = (int)($oldData['sync_to_zeh'] ?? 0);
+        if ($newFlag === $oldFlag) return $this->success();
+
+        // Находим osTree-узел этого отдела, чтобы по material path собрать всех вложенных employee.
+        $deptTree = $this->modx->getObject('osTree', [
+            'class'     => 'osDepartment',
+            'target_id' => $deptId,
+        ]);
+        if (!$deptTree) return $this->success();
+        $deptTreeId = (int)$deptTree->get('id');
+
+        // Все osEmployee-узлы под этим отделом (включая дочерние отделы) — через parents_ids LIKE.
+        // Это совпадает с тем, как в filterTreeByAccess собираются потомки доступного узла.
+        $this->pdo->setConfig([
+            'class'  => 'osTree',
+            'where'  => [
+                'class' => 'osEmployee',
+                'parents_ids:LIKE' => '%#' . $deptTreeId . '#%',
+            ],
+            'select' => 'target_id',
+            'return' => 'data',
+            'limit'  => 0,
+        ]);
+        $empNodes = $this->pdo->run();
+
+        $count = 0;
+        foreach ($empNodes as $row) {
+            $empId = (int)$row['target_id'];
+            if (!$empId) continue;
+
+            // resolveLegacyDeptId учитывает sync_to_zeh всех отделов на пути от
+            // сотрудника вверх — поэтому корректно отрабатывает и вложенные кейсы
+            // (например ИТР под Офис с флагом — Офис сам без флага).
+            $newLegacyId = $this->resolveLegacyDeptId($empId);
+
+            // gtsBStaff.department_id — источник для отчётов/балансов; держим в синке с link'ом.
+            $staff = $this->modx->getObject('gtsBStaff', $empId);
+            if ($staff) {
+                $staff->set('department_id', $newLegacyId);
+                $staff->save();
+            }
+
+            $this->modx->removeCollection('gtsBDepartmentStaffLink', ['staff_id' => $empId]);
+            $link = $this->modx->newObject('gtsBDepartmentStaffLink', [
+                'staff_id'      => $empId,
+                'department_id' => $newLegacyId,
+            ]);
+            $link->save();
+            $count++;
+        }
+
+        return $this->success('Обновлено сотрудников: ' . $count, ['count' => $count]);
+    }
+
     /**
      * Триггер для фильтрации узлов дерева в зависимости от прав доступа
      * @param array $params
