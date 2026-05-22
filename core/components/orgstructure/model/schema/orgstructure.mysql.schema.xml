@@ -87,6 +87,10 @@
        <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
        <field key="user_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
        <field key="post_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="track_schedule" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="0"/>
+       <field key="work_time_from" dbtype="time" phptype="string" null="true" default="09:00:00"/>
+       <field key="work_time_to" dbtype="time" phptype="string" null="true" default="18:00:00"/>
+       <field key="has_lunch" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
 
        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
               <column key="active" length="" collation="A" null="false"/>
