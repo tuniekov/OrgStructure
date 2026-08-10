@@ -529,6 +529,8 @@ class OrgStructure
      */
     public function syncEmployeeToLegacy(&$params)
     {
+        // Рубильник: на площадках без legacy (напр. modx28) синху отключаем настройкой.
+        if (!$this->modx->getOption('orgstructure_sync_legacy', null, true)) return $this->success();
         if ($params['type'] !== 'after') return $this->success();
         $method = $params['method'];
         // 'nodedrop' — после drag-drop в osTree (приходит из gtsAPI tree.class.php).
@@ -610,6 +612,8 @@ class OrgStructure
      */
     public function syncDepartmentToLegacy(&$params)
     {
+        // Рубильник: на площадках без legacy (напр. modx28) синху отключаем настройкой.
+        if (!$this->modx->getOption('orgstructure_sync_legacy', null, true)) return $this->success();
         if ($params['type'] !== 'after') return $this->success();
         if ($params['method'] !== 'update') return $this->success();
 

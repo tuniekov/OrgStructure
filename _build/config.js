@@ -8,7 +8,7 @@ export default {
     core:true,
     update:{
         snippets: true,
-        settings: true,
+        settings: false, // не перезаливать настройки при билде (иначе orgstructure_sync_legacy сбросится в 1, в т.ч. на modx28)
         gtsapirules: true,
         gtsapipackages: true,
     }
