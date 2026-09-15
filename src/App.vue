@@ -6,8 +6,8 @@
         <Tab value="1">Должности</Tab>
       </TabList>
       <TabPanels>
-        <TabPanel value="0">
-          <UniTreePanel :treetabs="treetabs"/>
+        <TabPanel value="0" class="orgstructure-tree">
+          <UniTreePanel2 :treetabs="treetabs" storageKey="orgstructure"/>
         </TabPanel>
         <TabPanel value="1">
           <PVTables table="osPost"/>
@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-  import { PVTables, UniTreePanel, Tabs, TabList, Tab, TabPanels, TabPanel } from 'pvtables/dist/pvtables'
+  import { PVTables, UniTreePanel2, Tabs, TabList, Tab, TabPanels, TabPanel } from 'pvtables/dist/pvtables'
   import { ref } from 'vue'
 
   const treetabs = ref({
@@ -32,38 +32,45 @@
 </script>
 
 <style>
+ /* Высоту панель ставит себе сама (UniTreePanel2, fitViewport). Фиксированные
+    100dvh здесь давали переполнение: шапка сайта над приложением высоту не
+    резервирует, и внизу страницы появлялся лишний внешний скролл. */
  #orgstructure {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 0;
  }
 
  #orgstructure > div {
   width: 100%;
-  height: 100%;
  }
 
- .p-tabs {
+ /* Только прямые потомки: без этого правила били и по вложенным PVTabs
+    внутри правой панели, ломая их высоты. */
+ #orgstructure > .p-tabs {
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
  }
 
- .p-tablist {
+ #orgstructure > .p-tabs > .p-tablist {
   flex-shrink: 0;
  }
 
- .p-tabpanels {
+ #orgstructure > .p-tabs > .p-tabpanels {
   flex-grow: 1;
-  overflow: hidden;
-  height: calc(100% - 50px);
+  min-height: 0;
  }
 
- .p-tabpanel {
-  height: 100%;
-  overflow: auto;
+ #orgstructure > .p-tabs > .p-tabpanels > .p-tabpanel {
+  min-height: 0;
+ }
+
+ /* Панель дерева сама раздаёт высоту внутри себя — отступы и скролл здесь лишние. */
+ #orgstructure > .p-tabs > .p-tabpanels > .p-tabpanel.orgstructure-tree {
+  overflow: hidden;
+  padding: 0;
  }
 </style>
