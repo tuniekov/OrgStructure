@@ -93,6 +93,24 @@
        <field key="has_lunch" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
        <field key="photo" dbtype="varchar" precision="255" phptype="string" null="true"/>
 
+       <!-- Карточка сотрудника по мокапу отдела кадров -->
+       <field key="birth_date" dbtype="date" phptype="date" null="true"/>
+       <!-- 1 мужской, 2 женский: нормы выдачи СИЗ у мужчин и женщин разные -->
+       <field key="sex" dbtype="tinyint" precision="1" attributes="unsigned" phptype="integer" null="true" default="0"/>
+       <field key="inn" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+       <field key="snils" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+       <field key="hired_at" dbtype="date" phptype="date" null="true"/>
+       <!-- График как текст справочных вариантов: смены живут в Smena, здесь только пометка кадров -->
+       <field key="schedule" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+       <field key="phone" dbtype="varchar" precision="50" phptype="string" null="true" default=""/>
+       <field key="address" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+
+       <!-- Размеры для выдачи спецодежды и печати личной карточки учёта СИЗ.
+            Строками: пишут «48-50», «10.5» — числом это не удержать. -->
+       <field key="height" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+       <field key="size_cloth" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+       <field key="size_shoe" dbtype="varchar" precision="20" phptype="string" null="true" default=""/>
+
        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
               <column key="active" length="" collation="A" null="false"/>
        </index>
@@ -120,6 +138,37 @@
        </index>
        <index alias="active" name="active" primary="false" unique="false" type="BTREE">
               <column key="active" length="" collation="A" null="false"/>
+       </index>
+    </object>
+    <!-- Документы сотрудника: трудовой договор, допсоглашения, квалификация.
+         Одна таблица на три вкладки — набор полей у них общий, а различают их
+         подписи и фильтр kind. Три таблицы дали бы три копии одного кода. -->
+    <object class="osEmployeeDoc" table="orgstructure_employee_docs" extends="xPDOSimpleObject">
+       <field key="employee_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="0"/>
+       <!-- contract | agreement | qualification -->
+       <field key="kind" dbtype="varchar" precision="20" phptype="string" null="false" default=""/>
+       <field key="name" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
+       <!-- Для квалификации: «Допуск», «Обучение», «Профессиональная квалификация» -->
+       <field key="category" dbtype="varchar" precision="100" phptype="string" null="true" default=""/>
+       <field key="number" dbtype="varchar" precision="100" phptype="string" null="true" default=""/>
+       <!-- Дата документа: подписания у соглашения, выдачи у удостоверения -->
+       <field key="date_start" dbtype="date" phptype="date" null="true"/>
+       <!-- Вступления в силу у соглашения, «действует до» у удостоверения -->
+       <field key="date_end" dbtype="date" phptype="date" null="true"/>
+       <field key="file" dbtype="varchar" precision="255" phptype="string" null="true" default=""/>
+       <field key="active" dbtype="tinyint" precision="1" phptype="boolean" null="true" default="1"/>
+       <field key="comment" dbtype="text" phptype="string" null="true"/>
+       <field key="createdon" dbtype="datetime" phptype="datetime" null="true"/>
+       <field key="createdby" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
+
+       <index alias="employee_id" name="employee_id" primary="false" unique="false" type="BTREE">
+              <column key="employee_id" length="" collation="A" null="false"/>
+       </index>
+       <index alias="kind" name="kind" primary="false" unique="false" type="BTREE">
+              <column key="kind" length="" collation="A" null="false"/>
+       </index>
+       <index alias="date_end" name="date_end" primary="false" unique="false" type="BTREE">
+              <column key="date_end" length="" collation="A" null="false"/>
        </index>
     </object>
 </model>

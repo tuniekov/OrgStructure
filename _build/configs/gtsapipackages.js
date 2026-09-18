@@ -1,3 +1,6 @@
+// Документы сотрудника ведёт отдел кадров
+const DOC_G = 'Administrator,hr,Отдел кадров'
+
 export default {
     orgstructure:{
         name:'orgstructure', //имя пакета MODX
@@ -6,7 +9,7 @@ export default {
                 table:'osTree', //Название таблицы
                 //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:19, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:21, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 3, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -207,7 +210,49 @@ export default {
                                         type:'form',
                                         title:'Основное',
                                         table:'osEmployee',
-                                    }
+                                    },
+                                    // Раздел со своими вкладками: у документов разный набор
+                                    // полей, но общая таблица osEmployeeDoc
+                                    docs:{
+                                        type:'tabs',
+                                        title:'Документы',
+                                        tabs:{
+                                            contract:{
+                                                title:'Договор',
+                                                table:'osEmpDocContract',
+                                                where:{ employee_id:'current_id' },
+                                            },
+                                            agreements:{
+                                                title:'Доп. соглашения',
+                                                table:'osEmpDocAgreement',
+                                                where:{ employee_id:'current_id' },
+                                            },
+                                            qualification:{
+                                                title:'Квалификация',
+                                                table:'osEmpDocQual',
+                                                where:{ employee_id:'current_id' },
+                                            },
+                                        },
+                                    },
+                                    // База инструмента и СИЗ одна (компонент PVPodotchet),
+                                    // но выданное смотрят раздельно: спецодежда со сроками
+                                    // носки нужна кадрам, инструмент — цеху
+                                    tmc:{
+                                        type:'tabs',
+                                        title:'Инструменты и СИЗ',
+                                        tabs:{
+                                            tools:{
+                                                title:'Инструменты',
+                                                table:'PVPdEmployeeTools',
+                                                where:{ employee_id:'current_id' },
+                                            },
+                                            ppe:{
+                                                title:'СИЗ',
+                                                table:'PVPdEmployeePpe',
+                                                where:{ employee_id:'current_id' },
+                                            },
+                                        },
+                                    },
                                 }
                             },
                         }
@@ -429,7 +474,7 @@ export default {
                 table:'osEmployee', //Название таблицы
                 //class:'osEmployee', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'os_employee_id', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:6, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:12, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -437,6 +482,34 @@ export default {
                 active:true, // Включено. Можно быстро временно выключить таблицу.
                 properties: { // свойства таблицы
                     limit:30,
+                    // Карточка сотрудника по мокапу отдела кадров: две колонки и блоки.
+                    // Раньше поля шли одной колонкой, а справа оставалось пустое поле экрана.
+                    form:{
+                        block_cols:2,
+                        // Карточка длиннее экрана: тянуться вниз за «Сохранить» неудобно
+                        autosave:true,
+                        blocks:{
+                            main:{
+                                label:'Личные данные',
+                                fields:'id,name,post_id,user_id,birth_date,sex,inn,snils,photo',
+                            },
+                            work:{
+                                label:'Работа',
+                                // «Работает» — первое, что смотрят в блоке про работу
+                                fields:'active,hired_at,schedule,track_schedule,work_time_from,work_time_to,has_lunch',
+                            },
+                            contacts:{
+                                label:'Контакты',
+                                fields:'phone,address',
+                            },
+                            // Размеры короткие, в две колонки заняли бы пол-экрана впустую
+                            // Ровно то, что стоит в их карточке учёта спецодежды
+                            sizes:{
+                                label:'Размеры',
+                                fields:'height,size_cloth,size_shoe',
+                            },
+                        },
+                    },
                     autocomplete:{ // Для таблицы включается автокомплект, который можно затем использовать в полях type:'autocomplete'
                         tpl:'{$name}', // шаблон записей для автокомплект
                         where:{
@@ -459,7 +532,7 @@ export default {
                             type:'text',
                         },
                         active:{
-                            label:'Активен',
+                            label:'Работает',
                             type:'boolean',
                         },
                         user_id:{
@@ -494,14 +567,192 @@ export default {
                             mediaSource:8, // foto_emploer → assets/uploads/emploer/
                             class:'osEmployee',
                         },
+                        // ── Личное ────────────────────────────────────────
+                        birth_date:{
+                            label:'Дата рождения',
+                            type:'date',
+                        },
+                        sex:{
+                            label:'Пол',
+                            type:'select',
+                            select_data:[
+                                { id: 1, content: 'Мужской' },
+                                { id: 2, content: 'Женский' },
+                            ],
+                        },
+                        inn:{
+                            label:'ИНН',
+                            type:'text',
+                        },
+                        snils:{
+                            label:'СНИЛС',
+                            type:'text',
+                        },
+                        // ── Работа ────────────────────────────────────────
+                        hired_at:{
+                            label:'Дата приёма',
+                            type:'date',
+                        },
+                        schedule:{
+                            label:'График работы',
+                            type:'select',
+                            select_data:[
+                                { id: '5/2', content: '5/2' },
+                                { id: '2/2', content: '2/2' },
+                                { id: '6/1', content: '6/1' },
+                                { id: '1/3', content: '1/3' },
+                                { id: 'Сменный', content: 'Сменный' },
+                                { id: 'Гибкий', content: 'Гибкий' },
+                            ],
+                        },
+                        // ── Контакты ──────────────────────────────────────
+                        phone:{
+                            label:'Рабочий телефон',
+                            type:'text',
+                        },
+                        address:{
+                            label:'Адрес проживания',
+                            type:'text',
+                            col_span:2,
+                        },
+                        // ── Размеры: выдача спецодежды и печать карточки учёта СИЗ ──
+                        height:{
+                            label:'Рост',
+                            type:'text',
+                        },
+                        size_cloth:{
+                            label:'Размер одежды',
+                            type:'text',
+                        },
+                        size_shoe:{
+                            label:'Размер обуви',
+                            type:'text',
+                        },
                     }
                 }
             },
+            // Трудовой договор
+            osEmpDocContract:{
+                table:'osEmpDocContract',
+                class:'osEmployeeDoc',
+                autocomplete_field:'',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:DOC_G,
+                permitions:'',
+                active:true,
+                properties:{
+                    limit:50,
+                    actions:{
+                        read:{},
+                        create:{},
+                        update:{},
+                        delete:{},
+                    },
+                    query:{
+                        where:{ 'osEmployeeDoc.kind':'contract' },
+                        sortby:{ 'osEmployeeDoc.date_start':'DESC', 'osEmployeeDoc.id':'DESC' },
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        // Приходит фильтром вкладки и наследуется новой строкой
+                        employee_id:{ type:'hidden' },
+                        kind:{ type:'hidden', filter:'contract', default:'contract' },
+                        name:{ label:'Наименование', type:'text' },
+                        date_start:{ label:'Дата', type:'date' },
+                        file:{ label:'Документ', type:'file', mediaSource:8 },
+                        active:{ label:'Действует', type:'boolean', default:1 },
+                        comment:{ label:'Примечание', type:'textarea' },
+                    },
+                },
+            },
+            // Дополнительные соглашения
+            osEmpDocAgreement:{
+                table:'osEmpDocAgreement',
+                class:'osEmployeeDoc',
+                autocomplete_field:'',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:DOC_G,
+                permitions:'',
+                active:true,
+                properties:{
+                    limit:50,
+                    actions:{
+                        read:{},
+                        create:{},
+                        update:{},
+                        delete:{},
+                    },
+                    query:{
+                        where:{ 'osEmployeeDoc.kind':'agreement' },
+                        sortby:{ 'osEmployeeDoc.date_start':'DESC', 'osEmployeeDoc.id':'DESC' },
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        // Приходит фильтром вкладки и наследуется новой строкой
+                        employee_id:{ type:'hidden' },
+                        kind:{ type:'hidden', filter:'agreement', default:'agreement' },
+                        name:{ label:'Наименование', type:'text' },
+                        date_start:{ label:'Дата подписания', type:'date' },
+                        date_end:{ label:'Дата вступления', type:'date' },
+                        file:{ label:'Документ', type:'file', mediaSource:8 },
+                        active:{ label:'Действует', type:'boolean', default:1 },
+                        comment:{ label:'Примечание', type:'textarea' },
+                    },
+                },
+            },
+            // Документы о квалификации
+            osEmpDocQual:{
+                table:'osEmpDocQual',
+                class:'osEmployeeDoc',
+                autocomplete_field:'',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:DOC_G,
+                permitions:'',
+                active:true,
+                properties:{
+                    limit:50,
+                    actions:{
+                        read:{},
+                        create:{},
+                        update:{},
+                        delete:{},
+                    },
+                    query:{
+                        where:{ 'osEmployeeDoc.kind':'qualification' },
+                        sortby:{ 'osEmployeeDoc.date_start':'DESC', 'osEmployeeDoc.id':'DESC' },
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        // Приходит фильтром вкладки и наследуется новой строкой
+                        employee_id:{ type:'hidden' },
+                        kind:{ type:'hidden', filter:'qualification', default:'qualification' },
+                        name:{ label:'Наименование', type:'text' },
+                        category:{ label:'Категория', type:'text' },
+                        number:{ label:'Номер', type:'text' },
+                        date_start:{ label:'Дата выдачи', type:'date' },
+                        date_end:{ label:'Действует до', type:'date' },
+                        file:{ label:'Документ', type:'file', mediaSource:8 },
+                        active:{ label:'Действует', type:'boolean', default:1 },
+                        comment:{ label:'Примечание', type:'textarea' },
+                    },
+                },
+            },
+
             osEmployeeChild:{
                 table:'osEmployeeChild', //Название таблицы
-                class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
+                // Строка этой таблицы — СОТРУДНИК (и её id — osEmployee.id, так отдаёт
+                // select), поэтому основной класс тоже он. С классом osTree правка уходила
+                // в узел дерева с тем же id: у 11 сотрудников такой узел есть, и снятая
+                // у человека галка «Работает» выключила бы, например, корень «ВК24».
+                class:'osEmployee',
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:6, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:8, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -509,14 +760,13 @@ export default {
                 active:true, // Включено. Можно быстро временно выключить таблицу.
                 properties: {
                     query:{
-                        leftJoin:{
-                            osEmployee:{
-                                class:'osEmployee',
+                        // innerJoin, а не left: в списке подразделения нужны только те,
+                        // кто стоит в дереве, иначе туда попали бы все сотрудники базы
+                        innerJoin:{
+                            osTree:{
+                                class:'osTree',
                                 on:"osTree.class = 'osEmployee' and osTree.target_id = osEmployee.id"
                             }
-                        },
-                        where:{
-                            'osTree.class':'osEmployee'
                         },
                         select:{
                             osEmployee:'*',
@@ -532,7 +782,17 @@ export default {
                     fields:{
                         id:{
                             type:'view',
-                            class:'osEmployee',  // основная таблица — osEmployee, иначе фильтр уйдёт в osTree.id
+                            class:'osEmployee',
+                        },
+                        // Фильтр вкладки «Сотрудники» приходит по parents_ids — он в дереве
+                        parents_ids:{
+                            type:'hidden',
+                            class:'osTree',
+                        },
+                        tree_id:{
+                            type:'hidden',
+                            class:'osTree',
+                            field:'id',
                         },
                         name:{
                             label:'ФИО сотрудника',
@@ -540,7 +800,7 @@ export default {
                             class:'osEmployee',
                         },
                         active:{
-                            label:'Активен',
+                            label:'Работает',
                             type:'boolean',
                             class:'osEmployee',
                             filter:{
