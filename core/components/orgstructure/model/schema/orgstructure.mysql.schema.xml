@@ -171,4 +171,17 @@
               <column key="date_end" length="" collation="A" null="false"/>
        </index>
     </object>
+
+    <!-- СИЗ сотрудника — простой список выданного (06.10.2026: вместо поштучного учёта PVPodotchet) -->
+    <object class="osEmployeePpe" table="orgstructure_employee_ppe" extends="xPDOSimpleObject">
+       <field key="employee_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="0"/>
+       <field key="name" dbtype="varchar" precision="255" phptype="string" null="false" default=""/>
+       <field key="issue_date" dbtype="date" phptype="date" null="true"/>
+       <field key="count" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="1"/>
+       <field key="price" dbtype="decimal" precision="12,2" phptype="float" null="false" default="0"/>
+
+       <index alias="employee_id" name="employee_id" primary="false" unique="false" type="BTREE">
+              <column key="employee_id" length="" collation="A" null="false"/>
+       </index>
+    </object>
 </model>

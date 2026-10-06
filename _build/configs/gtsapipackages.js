@@ -1,5 +1,7 @@
 // Документы сотрудника ведёт отдел кадров
 const DOC_G = 'Administrator,hr,Отдел кадров'
+// СИЗ выдают те же, кто выдавал через подотчёт, плюс кадры
+const PPE_G = 'Administrator,hr,Отдел кадров,ceh_boss,Снабжение'
 
 export default {
     orgstructure:{
@@ -9,7 +11,7 @@ export default {
                 table:'osTree', //Название таблицы
                 //class:'osTree', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:24, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:25, // при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 3, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:'', //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -246,9 +248,11 @@ export default {
                                                 table:'PVPdEmployeeTools',
                                                 where:{ employee_id:'current_id' },
                                             },
+                                            // 06.10.2026: простая табличка вместо поштучного
+                                            // учёта PVPdEmployeePpe
                                             ppe:{
                                                 title:'СИЗ',
-                                                table:'PVPdEmployeePpe',
+                                                table:'osEmpPpe',
                                                 where:{ employee_id:'current_id' },
                                             },
                                             // Выдано ему, но «1» ещё нет: пока это не его
@@ -760,6 +764,40 @@ export default {
                         file:{ label:'Документ', type:'file', mediaSource:8 },
                         active:{ label:'Действует', type:'boolean', default:1 },
                         comment:{ label:'Примечание', type:'textarea' },
+                    },
+                },
+            },
+
+            // СИЗ сотрудника: что выдали, когда, сколько и почём
+            osEmpPpe:{
+                table:'osEmpPpe',
+                class:'osEmployeePpe',
+                autocomplete_field:'',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:PPE_G,
+                permitions:'',
+                active:true,
+                properties:{
+                    limit:50,
+                    actions:{
+                        read:{},
+                        create:{},
+                        update:{},
+                        delete:{},
+                    },
+                    query:{
+                        sortby:{ 'osEmployeePpe.issue_date':'DESC', 'osEmployeePpe.id':'DESC' },
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        // Приходит фильтром вкладки и наследуется новой строкой
+                        employee_id:{ type:'hidden' },
+                        name:{ label:'Наименование', type:'text', 'min-width':'250px' },
+                        issue_date:{ label:'Дата выдачи', type:'date', default:'now' },
+                        count:{ label:'Кол-во', type:'number', default:1 },
+                        price:{ label:'Цена', type:'decimal' },
                     },
                 },
             },
