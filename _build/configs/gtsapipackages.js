@@ -882,6 +882,49 @@ export default {
                     }
                 }
             },
+            // Отсутствия сотрудника (отпуск / больничный / отгул) — для Люси v2 (gtsCraft).
+            // Правят начцеха и отдел кадров.
+            osAbsence:{
+                table:'osAbsence',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:'',
+                permitions:'',
+                active:true,
+                properties: {
+                    actions:{
+                        read:{},
+                        create:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' },
+                        update:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' },
+                        delete:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' }
+                    },
+                    query:{
+                        class:'osAbsence',
+                        leftJoin:{
+                            osEmployee:{ class:'osEmployee', on:'osEmployee.id = osAbsence.employee_id' }
+                        },
+                        select:{ osAbsence:'*', osEmployee:'osEmployee.name as employee_name' },
+                        sortby:{ 'osAbsence.date_from':'DESC' }
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        employee_id:{ label:'Сотрудник', type:'autocomplete', table:'osEmployee' },
+                        type:{
+                            label:'Причина',
+                            type:'select',
+                            select_data:[
+                                { id:1, content:'Отпуск' },
+                                { id:2, content:'Больничный' },
+                                { id:3, content:'Отгул' }
+                            ]
+                        },
+                        date_from:{ label:'С', type:'date' },
+                        date_to:{ label:'По', type:'date' },
+                        comment:{ label:'Примечание', type:'textarea' }
+                    }
+                }
+            },
             osAccess:{
                 table:'osAccess', //Название таблицы
                 //class:'osAccess', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.

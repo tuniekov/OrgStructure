@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <model package="orgstructure" baseClass="xPDOObject" platform="mysql" defaultEngine="InnoDB" phporgstructure-package="orgstructure"
-       version="1.1">
+       version="1.2">
     <object class="osTree" table="orgstructure_tree" extends="xPDOSimpleObject">
        <field key="parent_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="true" default="0"/>
        <field key="parents_ids" dbtype="varchar" precision="191" phptype="string" null="false" default=""/>
@@ -183,5 +183,25 @@
        <index alias="employee_id" name="employee_id" primary="false" unique="false" type="BTREE">
               <column key="employee_id" length="" collation="A" null="false"/>
        </index>
+    </object>
+    <!-- Отсутствия сотрудника: отпуск, больничный, отгул. Люся v2 (gtsCraft) не ставит
+         человека в смены на эти даты. Правит начцеха со своей страницы в gtsCraft. -->
+    <object class="osAbsence" table="orgstructure_absences" extends="xPDOSimpleObject">
+        <field key="employee_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="0"/>
+        <field key="date_from" dbtype="date" phptype="date" null="false"/>
+        <field key="date_to" dbtype="date" phptype="date" null="false"/>
+        <!-- 1 отпуск, 2 больничный, 3 отгул -->
+        <field key="type" dbtype="tinyint" precision="2" attributes="unsigned" phptype="integer" null="false" default="1"/>
+        <field key="comment" dbtype="text" phptype="string" null="true"/>
+        <field key="created_by" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="0"/>
+        <field key="createdon" dbtype="datetime" phptype="datetime" null="true"/>
+
+        <index alias="employee_id" name="employee_id" primary="false" unique="false" type="BTREE">
+            <column key="employee_id" length="" collation="A" null="false"/>
+        </index>
+        <index alias="dates" name="dates" primary="false" unique="false" type="BTREE">
+            <column key="date_from" length="" collation="A" null="false"/>
+            <column key="date_to" length="" collation="A" null="false"/>
+        </index>
     </object>
 </model>
