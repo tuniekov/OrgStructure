@@ -932,12 +932,48 @@ export default {
                     }
                 }
             },
+            // Цеховые сотрудники (в пути по дереву есть отдел с sync_to_zeh) — для выбора
+            // сотрудника на страницах начцеха; только работающие, по алфавиту
+            osEmployeeZeh:{
+                table:'osEmployeeZeh',
+                class:'osEmployee',
+                version:1,
+                type: 1,
+                authenticated:true,
+                groups:'',
+                permitions:'',
+                active:true,
+                properties: {
+                    autocomplete:{
+                        tpl:'{$name}',
+                        where:{ 'osEmployee.name:LIKE':'%query%' },
+                        query:{
+                            innerJoin:{
+                                empNode:{ class:'osTree', on:"empNode.class = 'osEmployee' AND empNode.target_id = osEmployee.id" },
+                                zehNode:{ class:'osTree', on:"zehNode.class = 'osDepartment' AND empNode.parents_ids LIKE CONCAT('%#', zehNode.id, '#%')" },
+                                zehDep:{ class:'osDepartment', on:'zehDep.id = zehNode.target_id AND zehDep.sync_to_zeh = 1' },
+                            },
+                            where:{ 'osEmployee.active':1 },
+                            groupby:'osEmployee.id',
+                            sortby:{ 'osEmployee.name':'ASC' },
+                        },
+                        limit:0,
+                    },
+                    actions:{
+                        read:{},
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        name:{ label:'ФИО', type:'text', readonly:1 },
+                    }
+                }
+            },
             // Отсутствия цеховых для начцеха: сотрудники, у которых в пути по дереву есть
             // отдел с «Синхронизировать в Цех» (sync_to_zeh), все филиалы
             osAbsenceZeh:{
                 table:'osAbsenceZeh',
                 class:'osAbsence',
-                version:2,
+                version:3,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -963,7 +999,7 @@ export default {
                     },
                     fields:{
                         id:{ type:'view' },
-                        employee_id:{ label:'Сотрудник', type:'autocomplete', table:'osEmployee' },
+                        employee_id:{ label:'Сотрудник', type:'autocomplete', table:'osEmployeeZeh' },
                         type:{
                             label:'Причина',
                             type:'select',
