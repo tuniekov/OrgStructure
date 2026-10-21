@@ -900,7 +900,7 @@ export default {
             // Правят начцеха и отдел кадров.
             osAbsence:{
                 table:'osAbsence',
-                version:2,
+                version:3,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -930,11 +930,13 @@ export default {
                             select_data:[
                                 { id:1, content:'Отпуск' },
                                 { id:2, content:'Больничный' },
-                                { id:3, content:'Отгул' }
+                                { id:3, content:'Отгул' },
+                                { id:4, content:'Командировка' }
                             ]
                         },
                         date_from:{ label:'С', type:'date' },
                         date_to:{ label:'По', type:'date' },
+                        filial_id:{ label:'В филиал (командировка)', type:'autocomplete', table:'osFilial' },
                         comment:{ label:'Примечание', type:'textarea' }
                     }
                 }
@@ -981,7 +983,7 @@ export default {
             osAbsenceZeh:{
                 table:'osAbsenceZeh',
                 class:'osAbsence',
-                version:4,
+                version:5,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -1014,11 +1016,13 @@ export default {
                             select_data:[
                                 { id:1, content:'Отпуск' },
                                 { id:2, content:'Больничный' },
-                                { id:3, content:'Отгул' }
+                                { id:3, content:'Отгул' },
+                                { id:4, content:'Командировка' }
                             ]
                         },
                         date_from:{ label:'С', type:'date' },
                         date_to:{ label:'По', type:'date' },
+                        filial_id:{ label:'В филиал (командировка)', type:'autocomplete', table:'osFilial' },
                         comment:{ label:'Примечание', type:'textarea' }
                     }
                 }
