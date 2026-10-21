@@ -932,6 +932,53 @@ export default {
                     }
                 }
             },
+            // Отсутствия цеховых для начцеха: сотрудники, у которых в пути по дереву есть
+            // отдел с «Синхронизировать в Цех» (sync_to_zeh), все филиалы
+            osAbsenceZeh:{
+                table:'osAbsenceZeh',
+                class:'osAbsence',
+                version:2,
+                type: 1,
+                authenticated:true,
+                groups:'',
+                permitions:'',
+                active:true,
+                properties: {
+                    actions:{
+                        read:{},
+                        create:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' },
+                        update:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' },
+                        delete:{ groups:'Administrator,ceh_boss,hr,Отдел кадров' }
+                    },
+                    query:{
+                        class:'osAbsence',
+                        innerJoin:{
+                            empNode:{ class:'osTree', on:"empNode.class = 'osEmployee' AND empNode.target_id = osAbsence.employee_id" },
+                            zehNode:{ class:'osTree', on:"zehNode.class = 'osDepartment' AND empNode.parents_ids LIKE CONCAT('%#', zehNode.id, '#%')" },
+                            zehDep:{ class:'osDepartment', on:'zehDep.id = zehNode.target_id AND zehDep.sync_to_zeh = 1' },
+                        },
+                        select:{ osAbsence:'*' },
+                        groupby:'osAbsence.id',
+                        sortby:{ 'osAbsence.date_from':'DESC' }
+                    },
+                    fields:{
+                        id:{ type:'view' },
+                        employee_id:{ label:'Сотрудник', type:'autocomplete', table:'osEmployee' },
+                        type:{
+                            label:'Причина',
+                            type:'select',
+                            select_data:[
+                                { id:1, content:'Отпуск' },
+                                { id:2, content:'Больничный' },
+                                { id:3, content:'Отгул' }
+                            ]
+                        },
+                        date_from:{ label:'С', type:'date' },
+                        date_to:{ label:'По', type:'date' },
+                        comment:{ label:'Примечание', type:'textarea' }
+                    }
+                }
+            },
             osAccess:{
                 table:'osAccess', //Название таблицы
                 //class:'osAccess', //Класс MODX таблицы базы данных. Если совпадает с table писать не обязательно.
