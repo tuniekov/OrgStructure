@@ -946,7 +946,7 @@ export default {
             osEmployeeZeh:{
                 table:'osEmployeeZeh',
                 class:'osEmployee',
-                version:2,
+                version:3,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -969,12 +969,45 @@ export default {
                         },
                         limit:0,
                     },
+                    limit:100,
+                    // Таблица на странице «Отсутствия и командировки»: отметить людей → «В командировку»
+                    query:{
+                        class:'osEmployee',
+                        innerJoin:{
+                            empNode:{ class:'osTree', on:"empNode.class = 'osEmployee' AND empNode.target_id = osEmployee.id" },
+                            zehNode:{ class:'osTree', on:"zehNode.class = 'osDepartment' AND empNode.parents_ids LIKE CONCAT('%#', zehNode.id, '#%')" },
+                            zehDep:{ class:'osDepartment', on:'zehDep.id = zehNode.target_id AND zehDep.sync_to_zeh = 1' },
+                        },
+                        where:{ 'osEmployee.active':1 },
+                        select:{ osEmployee:'osEmployee.id, osEmployee.name, osEmployee.post_id' },
+                        groupby:'osEmployee.id',
+                        sortby:{ 'osEmployee.name':'ASC' },
+                    },
                     actions:{
                         read:{ groups:ABS_G },
+                        // Права ещё раз проверяет OrgStructure::sendTrip
+                        send_trip:{
+                            action:'orgstructure/send_trip',
+                            head:true,
+                            label:'В командировку',
+                            icon:'pi pi-send',
+                            groups:ABS_G,
+                            modal_form:{
+                                title:'Командировка отмеченным',
+                                fields:{
+                                    filial_id:{ label:'В филиал', type:'autocomplete', table:'osFilial' },
+                                    date_from:{ label:'С', type:'date' },
+                                    date_to:{ label:'По', type:'date' },
+                                    comment:{ label:'Примечание', type:'textarea' },
+                                },
+                                buttons:{ submit:{ label:'Отправить', icon:'pi pi-send' } }
+                            }
+                        },
                     },
                     fields:{
                         id:{ type:'view' },
                         name:{ label:'ФИО', type:'text', readonly:1 },
+                        post_id:{ label:'Должность', type:'autocomplete', table:'osPost', readonly:1 },
                     }
                 }
             },

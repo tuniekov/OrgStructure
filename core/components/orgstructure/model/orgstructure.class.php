@@ -124,6 +124,63 @@ class OrgStructure
      * Регистрация триггеров для gtsAPI
      * @return array
      */
+    /**
+     * Действия «orgstructure/<имя>» из таблиц gtsAPI.
+     * gtsAPI для таких действий группы не проверяет — права проверяются здесь.
+     */
+    public function handleRequest($action, $data = [])
+    {
+        switch ($action) {
+            case 'send_trip': return $this->sendTrip($data);
+        }
+        return $this->error("Не найдено действие $action");
+    }
+
+    /**
+     * Командировка нескольким сотрудникам одной формой: отмеченные строки osEmployeeZeh
+     * (ids) → по строке osAbsence type=4 на каждого. Пересекающуюся командировку того же
+     * человека в тот же филиал не дублирует.
+     */
+    public function sendTrip($data)
+    {
+        if (!$this->modx->user->isMember(['Administrator', 'hr', 'Отдел кадров', 'ceh_boss'])) {
+            return $this->error('Нет прав на командировки');
+        }
+        $ids = isset($data['ids']) ? (is_array($data['ids']) ? $data['ids'] : explode(',', (string)$data['ids'])) : [];
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) return $this->error('Отметьте сотрудников');
+
+        $from = !empty($data['date_from']) ? strtotime($data['date_from']) : false;
+        $to = !empty($data['date_to']) ? strtotime($data['date_to']) : false;
+        if (!$from || !$to) return $this->error('Укажите даты командировки');
+        if ($to < $from) return $this->error('Дата «по» раньше даты «с»');
+        $from = date('Y-m-d', $from);
+        $to = date('Y-m-d', $to);
+
+        $filialId = isset($data['filial_id']) ? (int)$data['filial_id'] : 0;
+        if (!$filialId || !$this->modx->getCount('osFilial', $filialId)) return $this->error('Укажите филиал');
+        $comment = isset($data['comment']) ? trim((string)$data['comment']) : '';
+
+        $created = 0; $skipped = [];
+        foreach ($ids as $empId) {
+            if (!$emp = $this->modx->getObject('osEmployee', $empId)) continue;
+            $dup = $this->modx->getCount('osAbsence', [
+                'employee_id' => $empId, 'type' => 4, 'filial_id' => $filialId,
+                'date_from:<=' => $to, 'date_to:>=' => $from,
+            ]);
+            if ($dup) { $skipped[] = trim($emp->get('name')); continue; }
+            $a = $this->modx->newObject('osAbsence', [
+                'employee_id' => $empId, 'type' => 4, 'filial_id' => $filialId,
+                'date_from' => $from, 'date_to' => $to, 'comment' => $comment,
+                'created_by' => $this->modx->user->id, 'createdon' => date('Y-m-d H:i:s'),
+            ]);
+            if ($a->save()) $created++;
+        }
+        $msg = "В командировку отправлено: $created";
+        if ($skipped) $msg .= '. Уже в командировке на эти даты: ' . implode(', ', $skipped);
+        return $this->success($msg, ['created' => $created, 'skipped' => count($skipped)]);
+    }
+
     public function regTriggers()
     {
         return [
