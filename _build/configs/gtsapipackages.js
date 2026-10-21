@@ -5,6 +5,25 @@ const DOC_G = 'Administrator,hr,Отдел кадров'
 const HR_G = 'Administrator,hr,Отдел кадров'
 // Отсутствия (в т.ч. больничные) — кадры и начцеха
 const ABS_G = 'Administrator,hr,Отдел кадров,ceh_boss'
+// Кнопка «В командировку» над таблицей сотрудников: отметить людей → одна форма.
+// Права ещё раз проверяет OrgStructure::sendTrip (gtsAPI группы «пакет/метод» не проверяет)
+const SEND_TRIP = {
+    action:'orgstructure/send_trip',
+    head:true,
+    label:'В командировку',
+    icon:'pi pi-send',
+    groups:ABS_G,
+    modal_form:{
+        title:'Командировка отмеченным',
+        fields:{
+            filial_id:{ label:'В филиал', type:'autocomplete', table:'osFilial' },
+            date_from:{ label:'С', type:'date' },
+            date_to:{ label:'По', type:'date' },
+            comment:{ label:'Примечание', type:'textarea' },
+        },
+        buttons:{ submit:{ label:'Отправить', icon:'pi pi-send' } }
+    }
+}
 // СИЗ выдают те же, кто выдавал через подотчёт, плюс кадры
 const PPE_G = 'Administrator,hr,Отдел кадров,ceh_boss,Снабжение'
 
@@ -824,7 +843,7 @@ export default {
                 // у человека галка «Работает» выключила бы, например, корень «ВК24».
                 class:'osEmployee',
                 autocomplete_field:'', //Если задано то при определении полей таблицы автоматически узнает поле autocomplect
-                version:10, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
+                version:11, //при изменении в файле надо обновлять версию, чтобы изменения применились при установке.
                 type: 1, //тип таблицы: 1 - таблица PVTables, 2 - таблица JSON, 3 - дерево UniTree
                 authenticated:true, //доступ к таблице только аутентифицированным пользователям
                 groups:HR_G, //Можно определить группы пользователей которые будут иметь доступ к таблицам.
@@ -849,6 +868,7 @@ export default {
                     },
                     actions:{
                         read:{},
+                        send_trip: SEND_TRIP,
                         update:{
                             groups:'Administrator,hr,Отдел кадров'
                         }
@@ -946,7 +966,7 @@ export default {
             osEmployeeZeh:{
                 table:'osEmployeeZeh',
                 class:'osEmployee',
-                version:3,
+                version:4,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -985,24 +1005,7 @@ export default {
                     },
                     actions:{
                         read:{ groups:ABS_G },
-                        // Права ещё раз проверяет OrgStructure::sendTrip
-                        send_trip:{
-                            action:'orgstructure/send_trip',
-                            head:true,
-                            label:'В командировку',
-                            icon:'pi pi-send',
-                            groups:ABS_G,
-                            modal_form:{
-                                title:'Командировка отмеченным',
-                                fields:{
-                                    filial_id:{ label:'В филиал', type:'autocomplete', table:'osFilial' },
-                                    date_from:{ label:'С', type:'date' },
-                                    date_to:{ label:'По', type:'date' },
-                                    comment:{ label:'Примечание', type:'textarea' },
-                                },
-                                buttons:{ submit:{ label:'Отправить', icon:'pi pi-send' } }
-                            }
-                        },
+                        send_trip: SEND_TRIP,
                     },
                     fields:{
                         id:{ type:'view' },
