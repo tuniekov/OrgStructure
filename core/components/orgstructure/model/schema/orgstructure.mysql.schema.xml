@@ -184,13 +184,13 @@
               <column key="employee_id" length="" collation="A" null="false"/>
        </index>
     </object>
-    <!-- Отсутствия сотрудника: отпуск, больничный, отгул. Люся v2 (gtsCraft) не ставит
+    <!-- Отсутствия сотрудника: отпуск, больничный, отгул, прогул. Люся v2 (gtsCraft) не ставит
          человека в смены на эти даты. Правит начцеха со своей страницы в gtsCraft. -->
     <object class="osAbsence" table="orgstructure_absences" extends="xPDOSimpleObject">
         <field key="employee_id" dbtype="int" precision="10" attributes="unsigned" phptype="integer" null="false" default="0"/>
         <field key="date_from" dbtype="date" phptype="date" null="false"/>
         <field key="date_to" dbtype="date" phptype="date" null="false"/>
-        <!-- 1 отпуск, 2 больничный, 3 отгул, 4 командировка -->
+        <!-- 1 отпуск, 2 больничный, 3 отгул, 4 командировка, 5 прогул -->
         <field key="type" dbtype="tinyint" precision="2" attributes="unsigned" phptype="integer" null="false" default="1"/>
         <!-- командировка: в какой филиал (osFilial). В свой филиал человек на эти даты не выходит,
              Люся v2 считает его доступным в этом филиале -->

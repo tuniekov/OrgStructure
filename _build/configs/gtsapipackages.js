@@ -294,7 +294,7 @@ export default {
                                             },
                                         },
                                     },
-                                    // Отпуск / больничный / отгул — Люся v2 не ставит человека в эти даты
+                                    // Отпуск / больничный / отгул / прогул — Люся v2 не ставит человека в эти даты
                                     absences:{
                                         type:'table',
                                         title:'Отсутствия и командировки',
@@ -916,11 +916,11 @@ export default {
                     }
                 }
             },
-            // Отсутствия сотрудника (отпуск / больничный / отгул) — для Люси v2 (gtsCraft).
+            // Отсутствия сотрудника (отпуск / больничный / отгул / прогул) — для Люси v2 (gtsCraft).
             // Правят начцеха и отдел кадров.
             osAbsence:{
                 table:'osAbsence',
-                version:3,
+                version:4,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -951,7 +951,8 @@ export default {
                                 { id:1, content:'Отпуск' },
                                 { id:2, content:'Больничный' },
                                 { id:3, content:'Отгул' },
-                                { id:4, content:'Командировка' }
+                                { id:4, content:'Командировка' },
+                                { id:5, content:'Прогул' }
                             ]
                         },
                         date_from:{ label:'С', type:'date' },
@@ -1019,7 +1020,7 @@ export default {
             osAbsenceZeh:{
                 table:'osAbsenceZeh',
                 class:'osAbsence',
-                version:5,
+                version:6,
                 type: 1,
                 authenticated:true,
                 groups:'',
@@ -1053,7 +1054,8 @@ export default {
                                 { id:1, content:'Отпуск' },
                                 { id:2, content:'Больничный' },
                                 { id:3, content:'Отгул' },
-                                { id:4, content:'Командировка' }
+                                { id:4, content:'Командировка' },
+                                { id:5, content:'Прогул' }
                             ]
                         },
                         date_from:{ label:'С', type:'date' },
